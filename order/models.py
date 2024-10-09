@@ -2,7 +2,8 @@ from django.db import models
 from operator import mod
 from django.contrib.auth.models import User
 from django.utils import timezone
-from products.models import Product
+from django.contrib.contenttypes.models import ContentType
+from django.contrib.contenttypes.fields import GenericForeignKey
 
 # Create your models here.
 
@@ -38,10 +39,14 @@ class Order(models.Model):
         return str(self.id)
     
 
+
 class OrderItem(models.Model):
-    product = models.ForeignKey(Product , null=True, on_delete=models.SET_NULL )
-    order = models.ForeignKey(Order , null=True, on_delete=models.CASCADE, related_name='orderitems' )
-    name = models.CharField(max_length=200,default="",blank=False)
+    content_type = models.ForeignKey(ContentType, on_delete=models.CASCADE, null=True)  # جعل الحقل nullable
+    object_id = models.PositiveIntegerField(null=True)  # جعل الحقل nullable
+    product = GenericForeignKey('content_type', 'object_id')
+
+    order = models.ForeignKey(Order, null=True, on_delete=models.CASCADE, related_name='orderitems')
+    name = models.CharField(max_length=200, default="", blank=False)
     quantity = models.IntegerField(default=1)
     price = models.DecimalField(max_digits=7, decimal_places=2, blank=False)
     primary_image = models.URLField(max_length=200, blank=True, null=True)

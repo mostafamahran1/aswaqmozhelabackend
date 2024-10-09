@@ -11,6 +11,7 @@ from pharmacy.models import PharmacyProduct
 from phones.models import PhonesProduct
 from products.models import Product
 from spices.models import SpicesProduct
+from django.contrib.contenttypes.models import ContentType
 from supermarket.models import SupermarketProduct
 from toys.models import ToysProduct
 from .serializers import OrderSerializer
@@ -92,7 +93,7 @@ def new_order(request):
                 city=data['city'],
                 zip_code=data['zip_code'],
                 street=data['street'],
-                state=state,  # استخدم المتغير الجديد هنا
+                state=state,
                 phone_no=data['phone_no'],
                 country=data['country'],
                 total_amount=total_amount,
@@ -119,7 +120,8 @@ def new_order(request):
                 print(f"Product found: {product.name}")
                 
                 item = OrderItem.objects.create(
-                    product=product,
+                    content_type=ContentType.objects.get_for_model(product.__class__),
+                    object_id=product.id,
                     order=order,
                     name=product.name,
                     quantity=i['quantity'],
@@ -138,3 +140,4 @@ def new_order(request):
     except Exception as e:
         print(f"Error occurred: {e}")
         return Response({'error': str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
