@@ -144,6 +144,12 @@ def get_phone_number(request):
     phone_number = "01009345616"  # رقم الهاتف الذي تريد الاتصال به
     return Response({'phone_number': phone_number})
 
+@api_view(['GET'])
+@permission_classes([AllowAny])
+def get_delivery_Cost(request):
+    delivery_Cost = "25" 
+    return Response({'delivery_Cost': delivery_Cost})
+
 
 
 

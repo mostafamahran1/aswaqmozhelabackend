@@ -8,6 +8,7 @@ from rest_framework_simplejwt.views import TokenObtainPairView
 urlpatterns = [
     path('admin/', admin.site.urls),
     path('api/allproducts/', include('allproducts.urls')),
+    path('', include('offerspaner.urls')),
     path('api/', include('products.urls')),
     path('api/toys/', include('toys.urls')),
     path('api/phones/', include('phones.urls')),

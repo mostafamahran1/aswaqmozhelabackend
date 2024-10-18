@@ -33,6 +33,7 @@ ALLOWED_HOSTS = ['*','54.159.170.230', 'localhost', '127.0.0.1', '10.0.2.2']
 
 INSTALLED_APPS = [
     'corsheaders',
+    'offerspaner.apps.OfferspanerConfig',
     'allproducts.apps.AllproductsConfig',
     'supermarket.apps.SupermarketConfig',
     'spices.apps.SpicesConfig',

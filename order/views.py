@@ -63,6 +63,19 @@ def delete_order(request,pk):
     return Response({'order':"order is deleted"})
 
 
+def calculate_delivery_fee(state):
+    delivery_fee = 0
+    
+    if state == 'California':
+        delivery_fee = 10.0
+    elif state == 'New York':
+        delivery_fee = 15.0
+    else:
+        delivery_fee = 25.0 
+    
+    return delivery_fee
+
+
 
 
 
@@ -71,17 +84,26 @@ def delete_order(request,pk):
 def new_order(request):
     user = request.user
     data = request.data
-    print("Received data:", data)  # سجل البيانات التي تصل
+    print("User creating the order:", user.first_name, user.last_name)
+    print("Received data:", data) 
     order_items = data.get('order_Items', [])
     
     if not order_items:
         return Response({'error': 'No order items received'}, status=status.HTTP_400_BAD_REQUEST)
     
-    state = data.get('state', 'default_state')  # استخدام قيمة افتراضية إذا لم يكن المفتاح موجوداً
+    state = data.get('state', 'default_state')
 
     try:
         total_amount = sum(item['price'] * item['quantity'] for item in order_items)
         print("Total amount calculated:", total_amount)
+
+        # حساب تكلفة التوصيل
+        delivery_fee = calculate_delivery_fee(state)
+        print("Delivery fee calculated:", delivery_fee)
+        
+        # إضافة تكلفة التوصيل إلى المجموع الكلي
+        total_amount += delivery_fee
+
     except KeyError as e:
         print(f"Missing key in order items: {e}")
         return Response({'error': f'Missing key in order items: {e}'}, status=status.HTTP_400_BAD_REQUEST)
@@ -103,7 +125,6 @@ def new_order(request):
             for i in order_items:
                 product_id = i['product']
                 
-                # تحقق من نوع المنتج بناءً على معرف المنتج
                 product = (ClothesProduct.objects.filter(id=product_id).first() or
                            FoodsProduct.objects.filter(id=product_id).first() or
                            FavProduct.objects.filter(id=product_id).first() or
@@ -140,4 +161,3 @@ def new_order(request):
     except Exception as e:
         print(f"Error occurred: {e}")
         return Response({'error': str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
-
