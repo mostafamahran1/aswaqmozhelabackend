@@ -110,16 +110,6 @@ DATABASES = {
     }
 }
 
-#DATABASES = {
-#     'default': {
-#     'ENGINE' : 'django.db.backends.postgresql_psycopg2',
-#     'NAME' : 'do267h46ng04q',
-#     'USER' : 'u400t3099h9dbc',
-#     'PASSWORD' : 'p1b4197dfb9df703770c7eb35ccf91bb0042df369f499304a65129be33ec8e785',
-#     'HOST' : 'c1i13pt05ja4ag.cluster-czrs8kj4isg7.us-east-1.rds.amazonaws.com',
-#     'PORT' : '5432',
-#   }
-#}
 
 # Static files (CSS, JavaScript, Images)
 STATIC_URL = '/static/'
@@ -193,4 +183,6 @@ USE_TZ = True
 # https://docs.djangoproject.com/en/5.0/ref/settings/#default-auto-field
 
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
+
+DEFAULT_CHARSET = 'utf-8'
 
