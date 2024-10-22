@@ -141,7 +141,7 @@ def reset_password(request,token):
 @api_view(['GET'])
 @permission_classes([AllowAny])
 def get_phone_number(request):
-    phone_number = "01009345616"  # رقم الهاتف الذي تريد الاتصال به
+    phone_number = "01557813252"  # رقم الهاتف الذي تريد الاتصال به
     return Response({'phone_number': phone_number})
 
 @api_view(['GET'])

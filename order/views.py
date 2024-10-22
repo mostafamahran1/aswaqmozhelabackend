@@ -3,6 +3,7 @@ from rest_framework.decorators import api_view , permission_classes
 from rest_framework.response import Response
 from rest_framework.permissions import IsAuthenticated , IsAdminUser
 from rest_framework import status
+from products.models import Product
 from django.db import transaction
 from clothes.models import ClothesProduct
 from foods.models import FoodsProduct
@@ -132,7 +133,9 @@ def new_order(request):
                            PhonesProduct.objects.filter(id=product_id).first() or
                            SpicesProduct.objects.filter(id=product_id).first() or
                            SupermarketProduct.objects.filter(id=product_id).first() or
-                           ToysProduct.objects.filter(id=product_id).first())
+                           ToysProduct.objects.filter(id=product_id).first() or
+                           Product.objects.filter(id=product_id).first()
+                           )
                 
                 if not product:
                     print(f"Product with ID {product_id} does not exist")
