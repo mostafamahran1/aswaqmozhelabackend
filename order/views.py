@@ -15,6 +15,11 @@ from spices.models import SpicesProduct
 from django.contrib.contenttypes.models import ContentType
 from supermarket.models import SupermarketProduct
 from toys.models import ToysProduct
+from veils.models import VeilsProduct
+from socks.models import SocksProduct
+from birthday.models import BirthdayProduct
+from gifts.models import GiftsProduct
+from accessories.models import AccessoriesProduct
 from .serializers import OrderSerializer
 from .models import Order,OrderItem
 # Create your views here.
@@ -134,7 +139,12 @@ def new_order(request):
                            SpicesProduct.objects.filter(id=product_id).first() or
                            SupermarketProduct.objects.filter(id=product_id).first() or
                            ToysProduct.objects.filter(id=product_id).first() or
-                           Product.objects.filter(id=product_id).first()
+                           VeilsProduct.objects.filter(id=product_id).first() or
+                           Product.objects.filter(id=product_id).first() or
+                           SocksProduct.objects.filter(id=product_id).first() or
+                           BirthdayProduct.objects.filter(id=product_id).first() or
+                           GiftsProduct.objects.filter(id=product_id).first() or
+                           AccessoriesProduct.objects.filter(id=product_id).first()
                            )
                 
                 if not product:
