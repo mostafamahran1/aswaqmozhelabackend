@@ -54,6 +54,7 @@ def register(request):
 @permission_classes([IsAuthenticated])
 def current_user(request):
     user = UserSerializer(request.user, many = False)
+    print(user.data)
     return Response(user.data)
 
 
