@@ -11,14 +11,30 @@ from django.db.models import Avg
 
 @api_view(['GET'])
 def get_all_products(request):
+    # التحقق مما إذا كان المستخدم يريد عرض جميع المنتجات
+    show_all = request.GET.get('all', 'false').lower() == 'true'
+
+    # تطبيق الفلاتر على جميع المنتجات
     filterset = ProductsFilter(request.GET, queryset=FoodsProduct.objects.all().order_by('id'))
-    count = filterset.qs.count()
-    resPage = 12
-    paginator = PageNumberPagination()
-    paginator.page_size = resPage
-    queryset = paginator.paginate_queryset(filterset.qs, request)
+    queryset = filterset.qs
+    count = queryset.count()  # إجمالي عدد المنتجات
+
+    if not show_all:
+        # تطبيق Pagination إذا لم يتم طلب جميع المنتجات
+        resPage = 12
+        paginator = PageNumberPagination()
+        paginator.page_size = resPage
+        queryset = paginator.paginate_queryset(queryset, request)
+
+    # تسلسل البيانات
     serializer = ProductSerializer(queryset, many=True, context={'request': request})
-    return Response({"products": serializer.data, "per page": resPage, "count": count})
+
+    # إرجاع النتائج
+    return Response({
+        "products": serializer.data,
+        "count": count,
+        "all": show_all
+    })
 
 @api_view(['GET'])
 def get_by_id_product(request, pk):
