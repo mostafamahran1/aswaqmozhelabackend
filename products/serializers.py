@@ -22,20 +22,19 @@ class ProductSerializer(serializers.ModelSerializer):
         return serializer.data
 
     def get_primary_image(self, obj):
-        request = self.context.get('request')
-        if obj.primary_image:
+        request = self.context.get('request', None)
+        if obj.primary_image and request:  # Ensure the image exists and request is provided
             return request.build_absolute_uri(obj.primary_image.url)
         return None
 
     def get_secondary_image1(self, obj):
-        request = self.context.get('request')
-        if obj.secondary_image1:
+        request = self.context.get('request', None)
+        if obj.secondary_image1 and request:  # Ensure the image exists and request is provided
             return request.build_absolute_uri(obj.secondary_image1.url)
         return None
 
     def get_secondary_image2(self, obj):
-        request = self.context.get('request')
-        if obj.secondary_image2:
+        request = self.context.get('request', None)
+        if obj.secondary_image2 and request:  # Ensure the image exists and request is provided
             return request.build_absolute_uri(obj.secondary_image2.url)
         return None
-
