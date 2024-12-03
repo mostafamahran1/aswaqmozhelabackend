@@ -14,7 +14,7 @@ class PhonesProduct(models.Model):
     stock = models.IntegerField(default=0)
     createAT = models.DateTimeField(default=timezone.now)
     user = models.ForeignKey(User, null=True, on_delete=models.SET_NULL)
-    delivery_days = models.IntegerField(default=3)
+    delivery_days = models.IntegerField(default=1)
 
 
     def __str__(self):

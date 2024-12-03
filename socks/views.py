@@ -52,15 +52,15 @@ def new_product(request):
         product = SocksProduct.objects.create(
             name=data['name'],
             price=data['price'],
-            primary_image=data['primary_image'],
-            secondary_image1=data.get('secondary_image1'),
-            secondary_image2=data.get('secondary_image2'),
+            primary_image=request.FILES.get('primary_image', None),
+            secondary_image1=request.FILES.get('secondary_image1', None),
+            secondary_image2=request.FILES.get('secondary_image2', None),
             description=data.get('description', ''),
             stock=data['stock'],
             user=request.user,
-            delivery_days=data.get('delivery_days', 3)
+            delivery_days=data.get('delivery_days', 1)
         )
-        res = ProductSerializer(product, many=False)
+        res = ProductSerializer(product, many=False, context={'request': request})
         return Response({"product": res.data})
     else:
         return Response(serializer.errors)
@@ -75,17 +75,17 @@ def update_product(request, pk):
                         status=status.HTTP_403_FORBIDDEN)
 
     data = request.data
-    product.name = data['name']
-    product.price = data['price']
-    product.primary_image = data['primary_image']
-    product.secondary_image1 = data.get('secondary_image1')
-    product.secondary_image2 = data.get('secondary_image2')
-    product.description = request.data.get('description', product.description)
-    product.stock = request.data['stock']
-    product.delivery_days = data.get('delivery_days', product.delivery_days) 
+    product.name = data.get('name', product.name)
+    product.price = data.get('price', product.price)
+    product.primary_image = request.FILES.get('primary_image', product.primary_image)
+    product.secondary_image1 = request.FILES.get('secondary_image1', product.secondary_image1)
+    product.secondary_image2 = request.FILES.get('secondary_image2', product.secondary_image2)
+    product.description = data.get('description', product.description)
+    product.stock = data.get('stock', product.stock)
+    product.delivery_days = data.get('delivery_days', product.delivery_days)
 
     product.save()
-    serializer = ProductSerializer(product, many=False)
+    serializer = ProductSerializer(product, many=False, context={'request': request})
     return Response({"product": serializer.data})
 
 @api_view(['DELETE'])
