@@ -1,3 +1,4 @@
+import uuid
 from django.utils import timezone
 from django.db import models
 from django.contrib.auth.models import User
@@ -5,6 +6,7 @@ from django.db.models.signals import post_save
 from django.dispatch import receiver
 
 class AccessoriesProduct(models.Model):
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     name = models.CharField(max_length=50, default="", blank=False)
     price = models.DecimalField(max_digits=6, decimal_places=2, default=0)
     primary_image = models.ImageField(upload_to='products/', blank=True, null=True)
