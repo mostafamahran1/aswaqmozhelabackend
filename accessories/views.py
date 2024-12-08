@@ -8,8 +8,6 @@ from .models import AccessoriesProduct, AccessoriesReview
 from .serializers import ProductSerializer
 from rest_framework.pagination import PageNumberPagination
 from django.db.models import Avg
-from rest_framework.permissions import AllowAny
-
 
 @api_view(['GET'])
 def get_all_products(request):
@@ -39,7 +37,6 @@ def get_all_products(request):
     })
 
 @api_view(['GET'])
-@permission_classes([AllowAny])
 def get_by_id_product(request, pk):
     product = get_object_or_404(AccessoriesProduct, id=pk)
     serializer = ProductSerializer(product, many=False, context={'request': request})
