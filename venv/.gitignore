@@ -1,0 +1,29 @@
+*
+
+# البيئة الافتراضية
+.venv/
+venv/
+ENV/
+env/
+
+# ملفات بايثون المترجمة
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+
+# ملفات تكوين IDE
+.vscode/
+.idea/
+
+# ملفات مؤقتة وملفات أخرى غير ضرورية
+*.log
+*.sqlite3
+*.db
+*.pid
+*.sock
+*.dump
+
+# أنظمة التشغيل
+.DS_Store
+Thumbs.db
