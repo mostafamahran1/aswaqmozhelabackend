@@ -1,5 +1,5 @@
 import django_filters
-from .models import Allproduct
+from .models import BaseProduct
 from django.db.models import Q
 
 
@@ -33,5 +33,5 @@ class ProductsFilter(django_filters.FilterSet):
         )
 
     class Meta:
-        model = Allproduct
+        model = BaseProduct
         fields = ['name', 'min_price', 'max_price', 'keyword']

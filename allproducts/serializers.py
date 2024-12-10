@@ -1,10 +1,5 @@
 from rest_framework import serializers
-from .models import Allproduct, Allreview
-
-class ReviewSerializer(serializers.ModelSerializer):
-    class Meta:
-        model = Allreview
-        fields = "__all__"
+from .models import BaseProduct, Allreview
 
 class ProductSerializer(serializers.ModelSerializer):
     reviews = serializers.SerializerMethodField(method_name='get_reviews', read_only=True)
@@ -13,13 +8,8 @@ class ProductSerializer(serializers.ModelSerializer):
     secondary_image2 = serializers.SerializerMethodField(method_name='get_secondary_image2', read_only=True)
 
     class Meta:
-        model = Allproduct
+        model = BaseProduct
         fields = "__all__"
-
-    def get_reviews(self, obj):
-        reviews = obj.reviews.all()
-        serializer = ReviewSerializer(reviews, many=True)
-        return serializer.data
 
     def get_primary_image(self, obj):
         request = self.context.get('request', None)

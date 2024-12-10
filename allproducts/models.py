@@ -2,8 +2,8 @@ from django.utils import timezone
 from django.db import models
 from django.contrib.auth.models import User
 
-class Allproduct(models.Model):
-    CATEGORY_CHOICES = [
+class BaseProduct(models.Model):
+    MODEL_NAME_CHOICES = [
         ('Phones', 'Phones'),
         ('Clothes', 'Clothes'),
         ('Foods', 'Foods'),
@@ -11,11 +11,17 @@ class Allproduct(models.Model):
         ('Pharmacy', 'Pharmacy'),
         ('Spices', 'Spices'),
         ('Supermarket', 'Supermarket'),
-        ('Toys', 'Toys')
+        ('Toys', 'Toys'),
+        ('Veils', 'Veils'),
+        ('Socks', 'Socks'),
+        ('Birthday', 'Birthday'),
+        ('Gifts', 'Gifts'),
+        ('Accessories', 'Accessories'),
+        ('Library', 'Library')
     ]
-
+    
     name = models.CharField(max_length=50, default="", blank=False)
-    category = models.CharField(max_length=50, choices=CATEGORY_CHOICES, default='Supermarket')
+    model_name = models.CharField(max_length=50, choices=MODEL_NAME_CHOICES, default='Supermarket')
     price = models.DecimalField(max_digits=6, decimal_places=2, default=0)
     primary_image = models.ImageField(upload_to='products/', blank=True, null=True)
     secondary_image1 = models.ImageField(upload_to='products/', blank=True, null=True)
@@ -29,12 +35,5 @@ class Allproduct(models.Model):
     def __str__(self):
         return self.name
 
-class Allreview(models.Model):
-    product = models.ForeignKey(Allproduct, null=True, on_delete=models.CASCADE, related_name='reviews')
-    user = models.ForeignKey(User, null=True, on_delete=models.SET_NULL)
-    rating = models.IntegerField(default=0)
-    comment = models.TextField(max_length=1000, default="", blank=False)
-    createAT = models.DateTimeField(default=timezone.now)
-
-    def __str__(self):
-        return self.comment
+    class Meta:
+        abstract = True  # هذا يجعل النموذج مجرد قاعدة ولن يتم إنشاء جدول له في قاعدة البيانات

@@ -130,29 +130,38 @@ def new_order(request):
             
             for i in order_items:
                 product_id = i['product']
+                model_name = i['model_name']  # استلام model_name من الطلب
+
+    
+                product_model_map = {
+                    'Clothes': ClothesProduct,
+                    'Foods': FoodsProduct,
+                    'Fav': FavProduct,
+                    'Pharmacy': PharmacyProduct,
+                    'Phones': PhonesProduct,
+                    'Spices': SpicesProduct,
+                    'Supermarket': SupermarketProduct,
+                    'Toys': ToysProduct,
+                    'Veils': VeilsProduct,
+                    'Socks': SocksProduct,
+                    'Birthday': BirthdayProduct,
+                    'Gifts': GiftsProduct,
+                    'Accessories': AccessoriesProduct
+                }
                 
-                product = (ClothesProduct.objects.filter(id=product_id).first() or
-                           FoodsProduct.objects.filter(id=product_id).first() or
-                           FavProduct.objects.filter(id=product_id).first() or
-                           PharmacyProduct.objects.filter(id=product_id).first() or
-                           PhonesProduct.objects.filter(id=product_id).first() or
-                           SpicesProduct.objects.filter(id=product_id).first() or
-                           SupermarketProduct.objects.filter(id=product_id).first() or
-                           ToysProduct.objects.filter(id=product_id).first() or
-                           VeilsProduct.objects.filter(id=product_id).first() or
-                           Product.objects.filter(id=product_id).first() or
-                           SocksProduct.objects.filter(id=product_id).first() or
-                           BirthdayProduct.objects.filter(id=product_id).first() or
-                           GiftsProduct.objects.filter(id=product_id).first() or
-                           AccessoriesProduct.objects.filter(id=product_id).first()
-                           )
+                ProductModel = product_model_map.get(model_name)
+                if not ProductModel:
+                    print(f"Invalid model name: {model_name}")
+                    return Response({'error': f'Invalid model name: {model_name}'}, status=status.HTTP_400_BAD_REQUEST)
                 
+                product = ProductModel.objects.filter(id=product_id).first()
+
                 if not product:
-                    print(f"Product with ID {product_id} does not exist")
-                    return Response({'error': f'Product with ID {product_id} does not exist'}, status=status.HTTP_400_BAD_REQUEST)
+                    print(f"Product with ID {product_id} and model_name {model_name} does not exist")
+                    return Response({'error': f'Product with ID {product_id} and model_name {model_name} does not exist'}, status=status.HTTP_400_BAD_REQUEST)
 
                 print(f"Product found: {product.name}")
-                
+
                 item = OrderItem.objects.create(
                     content_type=ContentType.objects.get_for_model(product.__class__),
                     object_id=product.id,
@@ -163,9 +172,10 @@ def new_order(request):
                     primary_image=request.build_absolute_uri(product.primary_image.url) if product.primary_image else None
                 )
                 print(f"Order item created: {item.name}")
-                
+
                 product.stock -= item.quantity
                 product.save()
+
     
             serializer = OrderSerializer(order, many=False)
             print("Order serialized successfully")

@@ -27,7 +27,6 @@ class OrderSerializer(serializers.ModelSerializer):
     def get_user_full_name(self, obj):
         if obj.user:
             full_name = f"{obj.user.first_name} {obj.user.last_name}"
-            print("Full name:", full_name)  # سجل الاسم للتأكد من ظهوره
             return full_name
         return "Unknown User"
 
