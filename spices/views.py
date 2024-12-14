@@ -52,6 +52,7 @@ def new_product(request):
         product = SpicesProduct.objects.create(
             name=data['name'],
             price=data['price'],
+            model_name=data['model_name'],
             primary_image=request.FILES.get('primary_image', None),
             secondary_image1=request.FILES.get('secondary_image1', None),
             secondary_image2=request.FILES.get('secondary_image2', None),
@@ -77,6 +78,7 @@ def update_product(request, pk):
     data = request.data
     product.name = data.get('name', product.name)
     product.price = data.get('price', product.price)
+    product.model_name = data.get('model_name',product.model_name)
     product.primary_image = request.FILES.get('primary_image', product.primary_image)
     product.secondary_image1 = request.FILES.get('secondary_image1', product.secondary_image1)
     product.secondary_image2 = request.FILES.get('secondary_image2', product.secondary_image2)

@@ -9,7 +9,7 @@ urlpatterns = [
     path('admin/', admin.site.urls),
     path('api/allproducts/', include('allproducts.urls')),
     path('', include('offerspaner.urls')),
-    path('api/', include('products.urls')),
+    path('api/library/', include('products.urls')),
     path('api/toys/', include('toys.urls')),
     path('api/veils/', include('veils.urls')),
     path('api/socks/', include('socks.urls')),

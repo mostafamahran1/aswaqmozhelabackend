@@ -12,6 +12,7 @@ class OrderStatus(models.TextChoices):
     PROCESSING = 'Processing'
     SHIPPED = 'Shipped'
     DELIVERED = 'Delivered'
+    CANCELED = 'Canceled'
 
 class PaymentStatus(models.TextChoices):
     PAID = 'Paid'

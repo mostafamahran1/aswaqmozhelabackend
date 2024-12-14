@@ -1,7 +1,7 @@
 from django.contrib import admin
-from .models import Product
+from .models import LibraryProduct
 
-@admin.register(Product)
+@admin.register(LibraryProduct)
 class ProductAdmin(admin.ModelAdmin):
     list_display = ('name', 'price', 'stock', 'createAT', 'user')
     search_fields = ('name', 'description')

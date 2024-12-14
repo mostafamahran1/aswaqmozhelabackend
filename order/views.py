@@ -1,16 +1,16 @@
 from django.shortcuts import get_object_or_404
 from rest_framework.decorators import api_view , permission_classes
 from rest_framework.response import Response
-from rest_framework.permissions import IsAuthenticated , IsAdminUser
+from rest_framework.permissions import IsAuthenticated , IsAdminUser , BasePermission
 from rest_framework import status
-from products.models import Product
+from products.models import LibraryProduct
 from django.db import transaction
 from clothes.models import ClothesProduct
 from foods.models import FoodsProduct
 from fruitsandvegetables.models import FavProduct
 from pharmacy.models import PharmacyProduct
 from phones.models import PhonesProduct
-from products.models import Product
+from products.models import LibraryProduct
 from spices.models import SpicesProduct
 from django.contrib.contenttypes.models import ContentType
 from supermarket.models import SupermarketProduct
@@ -23,6 +23,11 @@ from accessories.models import AccessoriesProduct
 from .serializers import OrderSerializer
 from .models import Order,OrderItem
 # Create your views here.
+
+
+class IsSuperuserOrStaff(BasePermission):
+    def has_permission(self, request, view):
+        return request.user and (request.user.is_staff or request.user.is_superuser)
 
 
 @api_view(['GET'])
@@ -50,7 +55,7 @@ def get_order(request,pk):
 
 
 @api_view(['PUT'])
-@permission_classes([IsAuthenticated, IsAdminUser])
+@permission_classes([IsAuthenticated, IsSuperuserOrStaff])
 def process_order(request,pk):
     order = get_object_or_404(Order , id = pk)
     order.status = request.data['status']
@@ -61,7 +66,7 @@ def process_order(request,pk):
 
 
 @api_view(['DELETE'])
-@permission_classes([IsAuthenticated, IsAdminUser])
+@permission_classes([IsAuthenticated, IsSuperuserOrStaff])
 def delete_order(request,pk):
     order = get_object_or_404(Order , id = pk)
     order.delete()
@@ -146,7 +151,8 @@ def new_order(request):
                     'Socks': SocksProduct,
                     'Birthday': BirthdayProduct,
                     'Gifts': GiftsProduct,
-                    'Accessories': AccessoriesProduct
+                    'Accessories': AccessoriesProduct,
+                    'Library' : LibraryProduct
                 }
                 
                 ProductModel = product_model_map.get(model_name)

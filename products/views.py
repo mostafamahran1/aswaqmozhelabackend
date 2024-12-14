@@ -4,7 +4,7 @@ from rest_framework.response import Response
 from rest_framework.permissions import IsAuthenticated, IsAdminUser
 from rest_framework import status
 from .filters import ProductsFilter
-from .models import Product, Review
+from .models import LibraryProduct, Review
 from .serializers import ProductSerializer
 from rest_framework.pagination import PageNumberPagination
 from django.db.models import Avg
@@ -12,7 +12,7 @@ from django.db.models import Avg
 @api_view(['GET'])
 def get_all_products(request):
     show_all = request.GET.get('all', 'false').lower() == 'true'
-    filterset = ProductsFilter(request.GET, queryset=Product.objects.all().order_by('id'))
+    filterset = ProductsFilter(request.GET, queryset=LibraryProduct.objects.all().order_by('id'))
     queryset = filterset.qs
     count = queryset.count() 
 
@@ -34,7 +34,7 @@ def get_all_products(request):
 
 @api_view(['GET'])
 def get_by_id_product(request, pk):
-    product = get_object_or_404(Product, id=pk)
+    product = get_object_or_404(LibraryProduct, id=pk)
     serializer = ProductSerializer(product, many=False, context={'request': request})
     return Response({"product": serializer.data})
 
@@ -45,9 +45,10 @@ def new_product(request):
     serializer = ProductSerializer(data=data)
 
     if serializer.is_valid():
-        product = Product.objects.create(
+        product = LibraryProduct.objects.create(
             name=data['name'],
             price=data['price'],
+            model_name=data['model_name'],
             primary_image=request.FILES.get('primary_image', None),
             secondary_image1=request.FILES.get('secondary_image1', None),
             secondary_image2=request.FILES.get('secondary_image2', None),
@@ -64,7 +65,7 @@ def new_product(request):
 @api_view(['PUT'])
 @permission_classes([IsAuthenticated, IsAdminUser])
 def update_product(request, pk):
-    product = get_object_or_404(Product, id=pk)
+    product = get_object_or_404(LibraryProduct, id=pk)
 
     if product.user != request.user:
         return Response({"error": "Sorry, you cannot update this product"},
@@ -73,6 +74,7 @@ def update_product(request, pk):
     data = request.data
     product.name = data.get('name', product.name)
     product.price = data.get('price', product.price)
+    product.model_name = data.get('model_name',product.model_name)
     product.primary_image = request.FILES.get('primary_image', product.primary_image)
     product.secondary_image1 = request.FILES.get('secondary_image1', product.secondary_image1)
     product.secondary_image2 = request.FILES.get('secondary_image2', product.secondary_image2)
@@ -87,7 +89,7 @@ def update_product(request, pk):
 @api_view(['DELETE'])
 @permission_classes([IsAuthenticated, IsAdminUser])
 def delete_product(request, pk):
-    product = get_object_or_404(Product, id=pk)
+    product = get_object_or_404(LibraryProduct, id=pk)
 
     if product.user != request.user:
         return Response({"error": "Sorry, you cannot delete this product"},
@@ -100,7 +102,7 @@ def delete_product(request, pk):
 @permission_classes([IsAuthenticated])
 def create_review(request, pk):
     user = request.user
-    product = get_object_or_404(Product, id=pk)
+    product = get_object_or_404(LibraryProduct, id=pk)
     data = request.data
     review = product.reviews.filter(user=user)
 
@@ -132,7 +134,7 @@ def create_review(request, pk):
 @permission_classes([IsAuthenticated])
 def delete_review(request, pk):
     user = request.user
-    product = get_object_or_404(Product, id=pk)
+    product = get_object_or_404(LibraryProduct, id=pk)
     review = product.reviews.filter(user=user)
 
     if review.exists():

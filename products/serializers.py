@@ -1,5 +1,5 @@
 from rest_framework import serializers
-from .models import Product, Review
+from .models import LibraryProduct, Review
 
 class ReviewSerializer(serializers.ModelSerializer):
     class Meta:
@@ -13,7 +13,7 @@ class ProductSerializer(serializers.ModelSerializer):
     secondary_image2 = serializers.SerializerMethodField(method_name='get_secondary_image2', read_only=True)
 
     class Meta:
-        model = Product
+        model = LibraryProduct
         fields = "__all__"
 
     def get_reviews(self, obj):

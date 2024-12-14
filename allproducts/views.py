@@ -8,7 +8,7 @@ from clothes.models import ClothesProduct
 from foods.models import FoodsProduct
 from fruitsandvegetables.models import FavProduct
 from pharmacy.models import PharmacyProduct
-from products.models import Product
+from products.models import LibraryProduct
 from spices.models import SpicesProduct
 from supermarket.models import SupermarketProduct
 from toys.models import ToysProduct
@@ -25,7 +25,7 @@ from rest_framework import status
 
 class GetModelNames(APIView):
     def get(self, request):
-        model_name_choices = dict(BaseProduct.MODEL_NAME_CHOICES)
+        model_name_choices = [{"value": key, "label": value} for key, value in BaseProduct.MODEL_NAME_CHOICES]
         return Response(model_name_choices, status=status.HTTP_200_OK)
 
 def search_all_products(request):
@@ -38,7 +38,7 @@ def search_all_products(request):
     foods = FoodsProduct.objects.filter(Q(name__icontains=query) | Q(description__icontains=query)| Q(model_name__icontains=query))
     fav = FavProduct.objects.filter(Q(name__icontains=query) | Q(description__icontains=query)| Q(model_name__icontains=query))
     pharmacy = PharmacyProduct.objects.filter(Q(name__icontains=query) | Q(description__icontains=query)| Q(model_name__icontains=query))
-    libraryproducts = Product.objects.filter(Q(name__icontains=query) | Q(description__icontains=query)| Q(model_name__icontains=query))
+    libraryproducts = LibraryProduct.objects.filter(Q(name__icontains=query) | Q(description__icontains=query)| Q(model_name__icontains=query))
     spices = SpicesProduct.objects.filter(Q(name__icontains=query) | Q(description__icontains=query)| Q(model_name__icontains=query))
     supermarket = SupermarketProduct.objects.filter(Q(name__icontains=query) | Q(description__icontains=query)| Q(model_name__icontains=query))
     toys = ToysProduct.objects.filter(Q(name__icontains=query) | Q(description__icontains=query)| Q(model_name__icontains=query))

@@ -1,5 +1,5 @@
 import django_filters
-from .models import Product
+from .models import LibraryProduct
 
 class ProductsFilter(django_filters.FilterSet):
     name = django_filters.CharFilter(lookup_expr='icontains', field_name='name')
@@ -11,5 +11,5 @@ class ProductsFilter(django_filters.FilterSet):
         return queryset.filter(name__icontains=value) | queryset.filter(description__icontains=value)
 
     class Meta:
-        model = Product
+        model = LibraryProduct
         fields = ['name', 'min_price', 'max_price', 'keyword']
