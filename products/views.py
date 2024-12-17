@@ -12,7 +12,8 @@ from django.db.models import Avg
 @api_view(['GET'])
 def get_all_products(request):
     show_all = request.GET.get('all', 'false').lower() == 'true'
-    filterset = ProductsFilter(request.GET, queryset=LibraryProduct.objects.all().order_by('id'))
+    queryset = LibraryProduct.objects.filter(is_active=True)
+    filterset = ProductsFilter(request.GET, queryset=queryset.order_by('id'))
     queryset = filterset.qs
     count = queryset.count() 
 
@@ -55,7 +56,8 @@ def new_product(request):
             description=data.get('description', ''),
             stock=data['stock'],
             user=request.user,
-            delivery_days=data.get('delivery_days', 1)
+            delivery_days=data.get('delivery_days', 1),
+            is_active=data.get('is_active', True)
         )
         res = ProductSerializer(product, many=False, context={'request': request})
         return Response({"product": res.data})
@@ -81,6 +83,7 @@ def update_product(request, pk):
     product.description = data.get('description', product.description)
     product.stock = data.get('stock', product.stock)
     product.delivery_days = data.get('delivery_days', product.delivery_days)
+    product.is_active = data.get('is_active', product.is_active)
 
     product.save()
     serializer = ProductSerializer(product, many=False, context={'request': request})
