@@ -13,4 +13,5 @@ urlpatterns = [
     path('user_logout/', views.user_logout, name='user_logout'),
     path('delete_user/', views.delete_user, name='delete_user'),
     path('get_user_type/', views.get_user_type, name='get_user_type'),
+    path('google_login/', views.google_login, name='google_login'),
 ] 

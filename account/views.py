@@ -18,6 +18,7 @@ from .models import Profile
 from django.contrib.auth import logout
 from django.http import JsonResponse
 from django.contrib.auth.decorators import login_required
+from rest_framework_simplejwt.tokens import RefreshToken
 
 
 @api_view(['POST'])
@@ -193,3 +194,48 @@ def get_user_type(request):
         return JsonResponse({'user_type': 'staff'})
     else:
         return JsonResponse({'user_type': 'user'})
+    
+
+@api_view(['POST'])
+@permission_classes([AllowAny])
+def google_login(request):
+    data = request.data
+    email = data.get('email')
+    first_name = data.get('first_name')
+    last_name = data.get('last_name')
+    
+    # تحقق إذا كان المستخدم موجود
+    user = User.objects.filter(email=email).first()
+
+    if user is None:
+        # في حال كان المستخدم غير موجود، نقوم بإنشاء مستخدم جديد
+        user = User.objects.create(
+            first_name=first_name,
+            last_name=last_name,
+            email=email,
+            username=email,
+        )
+        user.save()
+
+    # تحقق من وجود بروفايل للمستخدم، إذا لم يكن موجودًا، قم بإنشائه
+    if not hasattr(user, 'profile'):
+        profile = Profile.objects.create(user=user)
+        profile.save()
+
+    # تحديد نوع المستخدم (admin, staff, user)
+    if user.is_superuser:
+        user_type = 'admin'
+    elif user.is_staff:
+        user_type = 'staff'
+    else:
+        user_type = 'user'
+
+    # الآن بعد التحقق من وجود المستخدم، يمكننا إصدار Token
+    refresh = RefreshToken.for_user(user)
+    access_token = str(refresh.access_token)
+
+    # إرسال ID Token للمستخدم مع user_type
+    return Response({
+        'access_token': access_token,
+        'user_type': user_type  # إضافة نوع المستخدم في الاستجابة
+    })
