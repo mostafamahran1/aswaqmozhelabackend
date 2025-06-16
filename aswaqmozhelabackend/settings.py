@@ -120,9 +120,9 @@ DATABASES = {
     'default': {
         'ENGINE': 'django.db.backends.postgresql',
         'NAME': 'mozheladatabase',
-        'USER': 'mahrandatabase',
+        'USER': 'mahran',
         'PASSWORD': 'Sasamanar01009345616',
-        'HOST': 'mozheladatabase.ctuyy0ueu8yy.us-east-1.rds.amazonaws.com',
+        'HOST': 'mozheladb.ctuyy0ueu8yy.us-east-1.rds.amazonaws.com',
         'PORT': '5432',
     }
 }
