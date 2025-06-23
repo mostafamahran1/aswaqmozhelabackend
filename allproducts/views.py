@@ -58,7 +58,7 @@ def search_all_products(request):
 
 
 def get_latest_products(request):
-    count = int(request.GET.get('count', 10))  # Default to 10 if not provided
+    count = int(request.GET.get('count', 100))  # Default to 10 if not provided
 
     models = [
         PhonesProduct, ClothesProduct, FoodsProduct, FavProduct, PharmacyProduct, LibraryProduct,
