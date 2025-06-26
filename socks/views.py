@@ -88,7 +88,9 @@ def update_product(request, pk):
     product.description = data.get('description', product.description)
     product.stock = data.get('stock', product.stock)
     product.delivery_days = data.get('delivery_days', product.delivery_days)
-    product.is_active = data.get('is_active', product.is_active)
+    is_active_str = str(data.get('is_active', product.is_active)).lower()
+    product.is_active = is_active_str == 'true'
+
 
     product.save()
     serializer = ProductSerializer(product, many=False, context={'request': request})
