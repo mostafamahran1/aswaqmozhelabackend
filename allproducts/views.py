@@ -21,6 +21,25 @@ from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework import status
 from django.conf import settings
+from rest_framework.decorators import api_view
+
+
+MODEL_MAPPING = {
+    'Phones': PhonesProduct,
+    'Clothes': ClothesProduct,
+    'Foods': FoodsProduct,
+    'Fav': FavProduct,
+    'Pharmacy': PharmacyProduct,
+    'Library': LibraryProduct,
+    'Spices': SpicesProduct,
+    'Supermarket': SupermarketProduct,
+    'Toys': ToysProduct,
+    'Accessories': AccessoriesProduct,
+    'Gifts': GiftsProduct,
+    'Birthday': BirthdayProduct,
+    'Socks': SocksProduct,
+    'Veils': VeilsProduct,
+}
 
 
 class GetModelNames(APIView):
@@ -91,3 +110,28 @@ def get_latest_products(request):
     sorted_products = heapq.nlargest(count, all_products, key=lambda x: x['createAT'])
 
     return JsonResponse({'products': sorted_products})
+
+@api_view(['GET'])
+def get_product_by_model_and_id(request):
+    model_name = request.GET.get('model_name')
+    product_id = request.GET.get('id')
+    
+    if model_name not in MODEL_MAPPING or not product_id:
+        return Response({'error': 'Invalid parameters'}, status=status.HTTP_400_BAD_REQUEST)
+
+    try:
+        product = MODEL_MAPPING[model_name].objects.get(id=product_id)
+    except:
+        return Response({'error': 'Product not found'}, status=status.HTTP_404_NOT_FOUND)
+
+    return Response({
+        'id': product.id,
+        'name': product.name,
+        'price': product.price,
+        'model_name': product.model_name,
+        'description': product.description,
+        'primary_image': request.build_absolute_uri(product.primary_image.url) if product.primary_image else '',
+        'secondary_image1': request.build_absolute_uri(product.secondary_image1.url) if product.secondary_image1 else '',
+        'secondary_image2': request.build_absolute_uri(product.secondary_image2.url) if product.secondary_image2 else '',
+        'delivery_days': product.delivery_days,
+    }, status=status.HTTP_200_OK)
