@@ -62,7 +62,8 @@ def new_product(request):
             stock=data['stock'],
             user=request.user,
             delivery_days=data.get('delivery_days', 1),
-            is_active=data.get('is_active', True)
+            is_active=data.get('is_active', True),
+            is_available=data.get('is_available', True)
         )
         res = ProductSerializer(product, many=False, context={'request': request})
         return Response({"product": res.data})
@@ -88,8 +89,13 @@ def update_product(request, pk):
     product.description = data.get('description', product.description)
     product.stock = data.get('stock', product.stock)
     product.delivery_days = data.get('delivery_days', product.delivery_days)
+
     is_active_str = str(data.get('is_active', product.is_active)).lower()
     product.is_active = is_active_str == 'true'
+
+    is_available_str = str(data.get('is_available', product.is_available)).lower()
+    product.is_available = is_available_str == 'true'
+
     product.save()
     
     serializer = ProductSerializer(product, many=False, context={'request': request})

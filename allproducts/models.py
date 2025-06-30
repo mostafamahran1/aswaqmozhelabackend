@@ -32,6 +32,7 @@ class BaseProduct(models.Model):
     user = models.ForeignKey(User, null=True, on_delete=models.SET_NULL)
     delivery_days = models.IntegerField(default=1)
     is_active = models.BooleanField(default=True)
+    is_available = models.BooleanField(default=True)
 
     def __str__(self):
         return self.name

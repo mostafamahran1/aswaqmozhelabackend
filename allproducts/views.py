@@ -102,6 +102,7 @@ def get_latest_products(request):
                 'stock': product.stock,
                 'delivery_days': product.delivery_days,
                 'is_active': product.is_active,
+                'is_available': product.is_available,
                 'user': product.user.id if product.user else None
             }
             all_products.append(product_data)
