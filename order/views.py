@@ -82,7 +82,7 @@ def calculate_delivery_fee(state):
     elif state == 'New York':
         delivery_fee = 15.0
     else:
-        delivery_fee = 25.0 
+        delivery_fee = 35.0 
     
     return delivery_fee
 

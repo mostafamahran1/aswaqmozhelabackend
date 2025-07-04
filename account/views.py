@@ -149,7 +149,7 @@ def get_phone_number(request):
 @api_view(['GET'])
 @permission_classes([AllowAny])
 def get_delivery_Cost(request):
-    delivery_Cost = "25" 
+    delivery_Cost = "35" 
     return Response({'delivery_Cost': delivery_Cost})
 
 
