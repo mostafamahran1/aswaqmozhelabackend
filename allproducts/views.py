@@ -4,7 +4,7 @@ from django.db.models import Q
 from django.templatetags.static import static
 from .models import BaseProduct
 from phones.models import PhonesProduct
-from clothes.models import ClothesProduct
+from shein.models import SheinProduct
 from foods.models import FoodsProduct
 from fruitsandvegetables.models import FavProduct
 from pharmacy.models import PharmacyProduct
@@ -25,7 +25,7 @@ from django.conf import settings
 
 MODEL_MAPPING = {
     'Phones': PhonesProduct,
-    'Clothes': ClothesProduct,
+    'Clothes': SheinProduct,
     'Foods': FoodsProduct,
     'Fav': FavProduct,
     'Pharmacy': PharmacyProduct,
@@ -53,7 +53,7 @@ def search_all_products(request):
         return JsonResponse({"products": []})
 
     models = [
-        PhonesProduct, ClothesProduct, FoodsProduct, FavProduct, PharmacyProduct, LibraryProduct,
+        PhonesProduct, SheinProduct, FoodsProduct, FavProduct, PharmacyProduct, LibraryProduct,
         SpicesProduct, SupermarketProduct, ToysProduct, AccessoriesProduct, GiftsProduct,
         BirthdayProduct, SocksProduct, VeilsProduct
     ]
@@ -79,7 +79,7 @@ def get_latest_products(request):
     count = int(request.GET.get('count', 100))  # Default to 10 if not provided
 
     models = [
-        PhonesProduct, ClothesProduct, FoodsProduct, FavProduct, PharmacyProduct, LibraryProduct,
+        PhonesProduct, SheinProduct, FoodsProduct, FavProduct, PharmacyProduct, LibraryProduct,
         SpicesProduct, SupermarketProduct, ToysProduct, AccessoriesProduct, GiftsProduct,
         BirthdayProduct, SocksProduct, VeilsProduct
     ]

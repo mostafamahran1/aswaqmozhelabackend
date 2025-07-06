@@ -46,7 +46,7 @@ INSTALLED_APPS = [
     'pharmacy.apps.PharmacyConfig',
     'fruitsandvegetables.apps.FruitsandvegetablesConfig',
     'foods.apps.FoodsConfig',
-    'clothes.apps.ClothesConfig',
+    'shein.apps.SheinConfig',
     'phones.apps.PhonesConfig',
     'toys.apps.ToysConfig',
     'order.apps.OrderConfig',

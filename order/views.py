@@ -5,7 +5,7 @@ from rest_framework.permissions import IsAuthenticated , IsAdminUser , BasePermi
 from rest_framework import status
 from products.models import LibraryProduct
 from django.db import transaction
-from clothes.models import ClothesProduct
+from shein.models import SheinProduct
 from foods.models import FoodsProduct
 from fruitsandvegetables.models import FavProduct
 from pharmacy.models import PharmacyProduct
@@ -139,7 +139,7 @@ def new_order(request):
 
     
                 product_model_map = {
-                    'Clothes': ClothesProduct,
+                    'Clothes': SheinProduct,
                     'Foods': FoodsProduct,
                     'Fav': FavProduct,
                     'Pharmacy': PharmacyProduct,

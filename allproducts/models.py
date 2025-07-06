@@ -5,7 +5,7 @@ from django.contrib.auth.models import User
 class BaseProduct(models.Model):
     MODEL_NAME_CHOICES = [
         ('Phones', 'Phones'),
-        ('Clothes', 'Clothes'),
+        ('Shein', 'Shein'),
         ('Foods', 'Foods'),
         ('Fav', 'Fav'),
         ('Pharmacy', 'Pharmacy'),

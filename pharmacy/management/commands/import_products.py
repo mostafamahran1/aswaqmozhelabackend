@@ -5,11 +5,13 @@ from io import BytesIO
 from django.core.files import File
 from pharmacy.models import PharmacyProduct
 from supermarket.models import SupermarketProduct
+from shein.models import SheinProduct
 from django.contrib.auth.models import User
 
 MODEL_MAP = {
     'Pharmacy': PharmacyProduct,
     'Supermarket': SupermarketProduct,
+    'Clothes' : SheinProduct
 }
 
 def import_products_from_csv(csv_path, default_user_id):
