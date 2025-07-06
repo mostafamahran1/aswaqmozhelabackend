@@ -139,7 +139,7 @@ def new_order(request):
 
     
                 product_model_map = {
-                    'Clothes': SheinProduct,
+                    'Shein': SheinProduct,
                     'Foods': FoodsProduct,
                     'Fav': FavProduct,
                     'Pharmacy': PharmacyProduct,
