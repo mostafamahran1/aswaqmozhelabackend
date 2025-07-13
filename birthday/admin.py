@@ -3,7 +3,7 @@ from .models import BirthdayProduct
 
 @admin.register(BirthdayProduct)
 class ProductAdmin(admin.ModelAdmin):
-    list_display = ('name', 'price', 'stock', 'createAT', 'user')
+    list_display = ('name', 'price','original_price', 'discount_percentage', 'stock', 'createAT', 'user')
     search_fields = ('name', 'description')
     list_filter = ('createAT', 'user')
 

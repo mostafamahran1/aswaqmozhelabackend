@@ -22,7 +22,9 @@ class BaseProduct(models.Model):
     
     name = models.CharField(max_length=100, default="", blank=False)
     model_name = models.CharField(max_length=50, choices=MODEL_NAME_CHOICES, default='Supermarket')
-    price = models.DecimalField(max_digits=6, decimal_places=2, default=0)
+    price = models.DecimalField(max_digits=6, decimal_places=2, default=0)#السعر بعد الخصم 
+    original_price = models.DecimalField(max_digits=6, decimal_places=2, default=0) #السعر قبل الخصم
+    discount_percentage = models.DecimalField(max_digits=5, decimal_places=2, default=0) #نسبة الخصم
     primary_image = models.ImageField(upload_to='products/', blank=True, null=True)
     secondary_image1 = models.ImageField(upload_to='products/', blank=True, null=True)
     secondary_image2 = models.ImageField(upload_to='products/', blank=True, null=True)
@@ -36,6 +38,19 @@ class BaseProduct(models.Model):
 
     def __str__(self):
         return self.name
+    
+    def save(self, *args, **kwargs):
+        try:
+            discount = float(self.discount_percentage)
+            original = float(self.original_price)
+            if discount > 0 and original > 0:
+                self.price = original - (original * discount / 100)
+            else:
+                self.price = original
+        except (ValueError, TypeError):
+            self.price = 0  # أو أي قيمة افتراضية
+        super().save(*args, **kwargs)
+
 
     class Meta:
         abstract = True  # هذا يجعل النموذج مجرد قاعدة ولن يتم إنشاء جدول له في قاعدة البيانات

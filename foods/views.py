@@ -53,7 +53,8 @@ def new_product(request):
     if serializer.is_valid():
         product = FoodsProduct.objects.create(
             name=data['name'],
-            price=data['price'],
+            original_price=data['original_price'],
+            discount_percentage=data['discount_percentage'],
             model_name=data['model_name'],
             primary_image=request.FILES.get('primary_image', None),
             secondary_image1=request.FILES.get('secondary_image1', None),
@@ -66,6 +67,7 @@ def new_product(request):
             is_available=data.get('is_available', True)
 
         )
+        product.save()
         res = ProductSerializer(product, many=False, context={'request': request})
         return Response({"product": res.data})
     else:
@@ -82,7 +84,8 @@ def update_product(request, pk):
 
     data = request.data
     product.name = data.get('name', product.name)
-    product.price = data.get('price', product.price)
+    product.original_price = data.get('original_price', product.original_price)
+    product.discount_percentage = data.get('discount_percentage', product.discount_percentage)
     product.model_name = data.get('model_name',product.model_name)
     product.primary_image = request.FILES.get('primary_image', product.primary_image)
     product.secondary_image1 = request.FILES.get('secondary_image1', product.secondary_image1)
