@@ -115,6 +115,7 @@ def get_latest_products(request):
 
 
 def get_discounted_products(request):
+    print("=== View Hit ===")
     count = int(request.GET.get('count', 100))  # عدد المنتجات اللي هترجعها، افتراضي 100
 
     models = [
@@ -125,9 +126,13 @@ def get_discounted_products(request):
 
     discounted_products = []
 
+    
+
     for model in models:
-        products = model.objects.filter(discount_percentage__gt=0).order_by('-createAT')[:count]
+        products = model.objects.filter(discount_percentage__gt=0).order_by('-createAT')
+        print(f">> {model.__name__} count: {products.count()}")
         for product in products:
+            
             product_data = {
                 'id': product.id,
                 'name': product.name,
