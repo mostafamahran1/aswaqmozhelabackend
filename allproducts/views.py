@@ -112,3 +112,43 @@ def get_latest_products(request):
     sorted_products = heapq.nlargest(count, all_products, key=lambda x: x['createAT'])
 
     return JsonResponse({'products': sorted_products})
+
+
+def get_discounted_products(request):
+    count = int(request.GET.get('count', 100))  # عدد المنتجات اللي هترجعها، افتراضي 100
+
+    models = [
+        PhonesProduct, SheinProduct, FoodsProduct, FavProduct, PharmacyProduct, LibraryProduct,
+        SpicesProduct, SupermarketProduct, ToysProduct, AccessoriesProduct, GiftsProduct,
+        BirthdayProduct, SocksProduct, VeilsProduct
+    ]
+
+    discounted_products = []
+
+    for model in models:
+        products = model.objects.filter(discount_percentage__gt=0).order_by('-createAT')[:count]
+        for product in products:
+            product_data = {
+                'id': product.id,
+                'name': product.name,
+                'model_name': product.model_name,
+                'price': product.price,
+                'original_price': product.original_price,
+                'discount_percentage': product.discount_percentage,
+                'createAT': product.createAT,
+                'primary_image': request.build_absolute_uri(product.primary_image.url) if product.primary_image else request.build_absolute_uri(static('products/placeholder.jpg')),
+                'secondary_image1': request.build_absolute_uri(product.secondary_image1.url) if product.secondary_image1 else request.build_absolute_uri(static('products/placeholder.jpg')),
+                'secondary_image2': request.build_absolute_uri(product.secondary_image2.url) if product.secondary_image2 else request.build_absolute_uri(static('products/placeholder.jpg')),
+                'description': product.description,
+                'stock': product.stock,
+                'delivery_days': product.delivery_days,
+                'is_active': product.is_active,
+                'is_available': product.is_available,
+                'user': product.user.id if product.user else None
+            }
+            discounted_products.append(product_data)
+
+    # ترتيب كل المنتجات المجمعة من جميع الموديلات حسب تاريخ الإنشاء
+    sorted_discounted_products = heapq.nlargest(count, discounted_products, key=lambda x: x['createAT'])
+
+    return JsonResponse({'products': sorted_discounted_products})
