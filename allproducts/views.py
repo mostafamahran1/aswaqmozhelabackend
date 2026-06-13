@@ -152,3 +152,45 @@ def get_discounted_products(request):
     sorted_discounted_products = heapq.nlargest(count, discounted_products, key=lambda x: x['createAT'])
 
     return JsonResponse({'products': sorted_discounted_products})
+
+
+def get_best_selling_products(request):
+    count = int(request.GET.get('count', 100))  # جلب أعلى 100 منتج مبيعاً
+
+    models = [
+        PhonesProduct, SheinProduct, FoodsProduct, FavProduct, PharmacyProduct, LibraryProduct,
+        SpicesProduct, SupermarketProduct, ToysProduct, AccessoriesProduct, GiftsProduct,
+        BirthdayProduct, SocksProduct, VeilsProduct
+    ]
+
+    best_selling_products = []
+
+    for model in models:
+        # جلب المنتجات المتاحة والنشطة وترتيبها حسب الأعلى مبيعاً داخل كل موديل
+        products = model.objects.filter(is_available=True, is_active=True).order_by('-orders_count')[:count]
+        for product in products:
+            product_data = {
+                'id': product.id,
+                'name': product.name,
+                'model_name': product.model_name,
+                'price': product.price,
+                'original_price': product.original_price,
+                'discount_percentage': product.discount_percentage,
+                'createAT': product.createAT,
+                'orders_count': product.orders_count,  # مررنا الحقل الجديد في الـ API
+                'primary_image': request.build_absolute_uri(product.primary_image.url) if product.primary_image else request.build_absolute_uri(static('products/placeholder.jpg')),
+                'secondary_image1': request.build_absolute_uri(product.secondary_image1.url) if product.secondary_image1 else request.build_absolute_uri(static('products/placeholder.jpg')),
+                'secondary_image2': request.build_absolute_uri(product.secondary_image2.url) if product.secondary_image2 else request.build_absolute_uri(static('products/placeholder.jpg')),
+                'description': product.description,
+                'stock': product.stock,
+                'delivery_days': product.delivery_days,
+                'is_active': product.is_active,
+                'is_available': product.is_available,
+                'user': product.user.id if product.user else None
+            }
+            best_selling_products.append(product_data)
+
+    # ترتيب جميع المنتجات المجمعة من كل الأقسام بناءً على الأعلى مبيعاً
+    sorted_best_sellers = heapq.nlargest(count, best_selling_products, key=lambda x: x['orders_count'])
+
+    return JsonResponse({'products': sorted_best_sellers})

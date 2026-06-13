@@ -8,6 +8,7 @@ class OrderItemsSerializer(serializers.ModelSerializer):
         fields = "__all__"
 
 class OrderSerializer(serializers.ModelSerializer):
+    createAT = serializers.DateTimeField(format="%Y-%m-%d %H:%M:%S", read_only=True)
     orderitems = serializers.SerializerMethodField(method_name="get_order_items", read_only=True)
     user_full_name = serializers.SerializerMethodField(method_name="get_user_full_name", read_only=True)  # لتسلسل اسم المستخدم
 

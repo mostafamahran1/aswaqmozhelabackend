@@ -84,61 +84,86 @@ def get_current_host(request):
     return "{protocol}://{host}/".format(protocol = protocol, host = host)
 
 
+from django.utils import timezone  # 👈 استيراد مكتبة الوقت المتوافقة مع دجانجو
+
+from django.utils import timezone  # 🚀 تأكد من وجود هذا الاستيراد في الأعلى
+
+# 1️⃣ دالة forgot_password
 @api_view(['POST'])
 @permission_classes([AllowAny])
 def forgot_password(request):
     data = request.data
-    user = get_object_or_404(User,email = data['email'])
-    token = str(randint(1000, 9999))
-    expire_date = datetime.now() + timedelta(minutes=30)
-    user.profile.reset_password_token = token
-    user.profile.reset_password_expire = expire_date
-    user.profile.save()
+    user = get_object_or_404(User, email=data['email'])
     
-    host = get_current_host(request)
-    link = "{host}api/reset_password/{token}".format(host=host, token=token)
-    body = "Your password reset link is: {link}".format(link=link)
+    profile, created = Profile.objects.get_or_create(user=user)
+    
+    token = str(randint(1000, 9999))
+    
+    # 🎯 الحساب الصحيح المتوافق مع دجانجو والـ Timezone بدون أي تحذيرات
+    expire_date = timezone.now() + timedelta(minutes=30)
+    
+    profile.reset_password_token = token
+    profile.reset_password_expire = expire_date
+    profile.save()
+    
+    subject = "Password Reset Code - Aswaq Mozhela"
+    body = f"Hello,\n\nYour 4-digit verification code to reset your password is: {token}\n\nThis code will expire in 30 minutes."
+    
     send_mail(
-        "Password reset from aswaqmozhela",
+        subject,
         body,
-        settings.EMAIL_HOST_USER,  # Sender's email address
-        [data['email']],  # Recipient's email address
-        fail_silently=False,  # Raise exception on failure
+        settings.EMAIL_HOST_USER,
+        [data['email']],
+        fail_silently=False,
     )
-    return Response({'details':'Password reset sent to {email}'.format(email = data['email'])})
+    
+    return Response({'details': 'Password reset code sent successfully.'})
 
 
+# 2️⃣ دالة verify_reset_token
 @api_view(['POST'])
 @permission_classes([AllowAny])
 def verify_reset_token(request, token):
-    user = get_object_or_404(User,profile__reset_password_token = token)
+    user = get_object_or_404(User, profile__reset_password_token=token)
 
-    if user.profile.reset_password_expire.replace(tzinfo=None) < datetime.now():
-        return Response({'error':'Token is expired'},status=status.HTTP_400_BAD_REQUEST)
+    # 🔬 سطر الـ Debug للتأكيد (هتلاقيهم دلوقتى متطابقين في نفس النطاق الزمني)
+    print(f"⏰ وقت السيرفر الحالي (Aware): {timezone.now()}")
+    print(f"💾 وقت انتهاء الكود في الداتابيز (Aware): {user.profile.reset_password_expire}")
+
+    # 🎯 المقارنة الشرعية الصحيحة بين وقتين يدعموا الـ Timezone
+    if user.profile.reset_password_expire < timezone.now():
+        return Response({'error': 'Token is expired'}, status=status.HTTP_400_BAD_REQUEST)
    
     return Response({'message': 'Token is valid.'}, status=200)
  
 
-
+# 3️⃣ دالة reset_password
 @api_view(['POST'])
 @permission_classes([AllowAny])
-def reset_password(request,token):
+def reset_password(request, token):
     data = request.data
-    user = get_object_or_404(User,profile__reset_password_token = token)
+    # جلب المستخدم المرتبط بهذا الـ token من خلال البروفايل
+    user = get_object_or_404(User, profile__reset_password_token=token)
 
-    if user.profile.reset_password_expire.replace(tzinfo=None) < datetime.now():
-        return Response({'error':'Token is expired'},status=status.HTTP_400_BAD_REQUEST)
+    # التحقق من صلاحية الوقت
+    if user.profile.reset_password_expire < timezone.now():
+        return Response({'error': 'Token is expired'}, status=status.HTTP_400_BAD_REQUEST)
     
+    # التحقق من تطابق حيلين كلمة المرور
     if data['password'] != data['confirmPassword']:
-        return Response({'error':'Password are not same'},status=status.HTTP_400_BAD_REQUEST)
+        return Response({'error': 'Passwords do not match'}, status=status.HTTP_400_BAD_REQUEST)
     
-    user.password = make_password(data['password'])
-    user.profile.reset_password_token = ""
-    user.profile.reset_password_expire = None
-    user.profile.save()
-    user.save()
-    return Response({'details':'Password reset successfully'})
-
+    # 🚀 الحل السحري: استخدام set_password بدلاً من make_password يدوياً
+    user.set_password(data['password'])
+    user.save()  # حفظ المستخدم أولاً بالباسورد المشفر الجديد
+    
+    # تصوير وتصفير بيانات التوكن في البروفايل عشان مايستخدمش تاني
+    profile = user.profile
+    profile.reset_password_token = ""
+    profile.reset_password_expire = None
+    profile.save()
+    
+    return Response({'details': 'Password reset successfully'}, status=status.HTTP_200_OK)
 
 @api_view(['GET'])
 @permission_classes([AllowAny])

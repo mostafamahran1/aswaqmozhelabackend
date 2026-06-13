@@ -35,6 +35,7 @@ class BaseProduct(models.Model):
     delivery_days = models.IntegerField(default=1)
     is_active = models.BooleanField(default=True)
     is_available = models.BooleanField(default=True)
+    orders_count = models.IntegerField(default=0)
 
     def __str__(self):
         return self.name

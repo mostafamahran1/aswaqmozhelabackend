@@ -29,12 +29,14 @@ class Order(models.Model):
     state = models.CharField(max_length=100,default="",blank=False)
     country = models.CharField(max_length=1000,default="",blank=False)
     phone_no = models.CharField(max_length=100,default="",blank=False)
-    total_amount = models.IntegerField(default=0)
+    total_amount = models.DecimalField(max_digits=10, decimal_places=2, default=0)
     payment_status = models.CharField(max_length=30,choices=PaymentStatus.choices,default=PaymentStatus.UNPAID)
     payment_mode = models.CharField(max_length=30,choices=PaymentMode.choices,default=PaymentMode.COD)
     status = models.CharField(max_length=60,choices=OrderStatus.choices,default=OrderStatus.PROCESSING)
     user = models.ForeignKey(User , null=True, on_delete=models.SET_NULL )
     createAT = models.DateTimeField(default=timezone.now)
+    coupon = models.ForeignKey('Coupon', null=True, blank=True, on_delete=models.SET_NULL)
+    discount_amount = models.DecimalField(max_digits=10, decimal_places=2, default=0)
 
     def __str__(self):
         return str(self.id)
@@ -54,3 +56,24 @@ class OrderItem(models.Model):
 
     def __str__(self):
         return self.name
+
+# models.py
+
+class Coupon(models.Model):
+    code = models.CharField(max_length=50, unique=True)
+    discount_percent = models.IntegerField(default=0)  # مثال 10%
+    discount_amount = models.DecimalField(max_digits=10, decimal_places=2, default=0)
+    min_order_amount = models.DecimalField(max_digits=10, decimal_places=2, default=0)
+    is_active = models.BooleanField(default=True)
+    expiry_date = models.DateTimeField()
+
+    def __str__(self):
+        return self.code
+    
+
+class DeliveryGovernorate(models.Model):
+    name = models.CharField(max_length=100, unique=True)
+    delivery_fee = models.DecimalField(max_digits=10, decimal_places=2)
+
+    def __str__(self):
+        return f"{self.name} - {self.delivery_fee} EGP"
