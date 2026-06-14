@@ -117,8 +117,8 @@ STATICFILES_DIRS = [
 # ==============================================================================
 # إعدادات الـ AWS S3 والـ Media الحديثة والمتوافقة بالكامل
 # ==============================================================================
-AWS_ACCESS_KEY_ID = 'AKIAYYWHOIXFR4AYYLPJ'
-AWS_SECRET_ACCESS_KEY = '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'
+AWS_ACCESS_KEY_ID = 'AKIAYYWHOIXFSAXB4V6U'
+AWS_SECRET_ACCESS_KEY = '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'
 AWS_STORAGE_BUCKET_NAME = 'aswaq-mozhela-media-storage'
 AWS_S3_REGION_NAME = 'us-east-1'
 
