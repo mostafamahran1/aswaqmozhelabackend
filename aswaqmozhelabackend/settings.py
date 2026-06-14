@@ -16,7 +16,7 @@ SECRET_KEY = 'django-insecure-+_uhbip6ikra2&!&mnoq(1w6g1p4%ja)ds+mw@%3jgf-_nn5p0
 
 # SECURITY WARNING: don't run with debug turned on in production!
 # تم إغلاق الـ DEBUG لحماية السيرفر ومنع تسريب البيانات الحساسة في الإنتاج
-DEBUG = True
+DEBUG = False
 
 # تم إضافة الـ IP الجديد للسيرفر هنا لضمان عمل الاتصال بنجاح
 ALLOWED_HOSTS = ['*', '54.237.36.97', 'localhost', '127.0.0.1', '10.0.2.2']
