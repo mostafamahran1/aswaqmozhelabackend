@@ -15,10 +15,8 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 SECRET_KEY = 'django-insecure-+_uhbip6ikra2&!&mnoq(1w6g1p4%ja)ds+mw@%3jgf-_nn5p0'
 
 # SECURITY WARNING: don't run with debug turned on in production!
-# تم إغلاق الـ DEBUG لحماية السيرفر ومنع تسريب البيانات الحساسة في الإنتاج
 DEBUG = False
 
-# تم إضافة الـ IP الجديد للسيرفر هنا لضمان عمل الاتصال بنجاح
 ALLOWED_HOSTS = ['*', '54.237.36.97', 'localhost', '127.0.0.1', '10.0.2.2']
 
 # Application definition
@@ -52,7 +50,7 @@ INSTALLED_APPS = [
     'rest_framework',
     'rest_framework_simplejwt',
     'django_filters',
-    'storages',  # تم إضافة مكتبة الربط مع AWS S3 هنا
+    'storages',  # مكتبة الربط مع AWS S3
 ]
 
 MIDDLEWARE = [
@@ -96,7 +94,7 @@ TEMPLATES = [
 
 WSGI_APPLICATION = 'aswaqmozhelabackend.wsgi.application'
 
-# إعدادات قاعدة البيانات الجديدة (PostgreSQL البطلة) جوة السيرفر
+# إعدادات قاعدة البيانات البطلة (PostgreSQL)
 DATABASES = {
     'default': {
         'ENGINE': 'django.db.backends.postgresql',
@@ -116,22 +114,29 @@ STATICFILES_DIRS = [
     os.path.join(BASE_DIR, 'static'),
 ]
 
-BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-
 # ==============================================================================
-# إعدادات الـ AWS S3 الجديدة لتخزين صور المنتجات وحماية مساحة السيرفر
+# إعدادات الـ AWS S3 والـ Media الحديثة والمتوافقة بالكامل
 # ==============================================================================
 AWS_ACCESS_KEY_ID = 'AKIAYYWHOIXFR4AYYLPJ'
 AWS_SECRET_ACCESS_KEY = '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'
 AWS_STORAGE_BUCKET_NAME = 'aswaq-mozhela-media-storage'
 AWS_S3_REGION_NAME = 'us-east-1'
-AWS_QUERYSTRING_AUTH = False
 
-# تفعيل الـ S3 حصرياً لملفات الميديا (الصور المرفوعة)
-DEFAULT_FILE_STORAGE = 'storages.backends.s3boto3.S3Boto3Storage'
+# إعدادات الصلاحيات وفك تشفير الروابط المؤقتة
+AWS_QUERYSTRING_AUTH = False
 AWS_DEFAULT_ACL = 'public-read'
 
-# الروابط التي سيقرأ منها أبلكيشن الفلوتر الصور مباشرة وبسرعة
+# تهيئة الـ Storages للميديا فقط مع الإبقاء على الملفات الثابتة محلياً بالسيرفر
+STORAGES = {
+    "default": {
+        "BACKEND": "storages.backends.s3boto3.S3Boto3Storage",
+    },
+    "staticfiles": {
+        "BACKEND": "django.contrib.staticfiles.storage.StaticFilesStorage",
+    },
+}
+
+# نطاق ومسارات قراءة الصور مباشرة من السحاب
 AWS_S3_CUSTOM_DOMAIN = f'{AWS_STORAGE_BUCKET_NAME}.s3.amazonaws.com'
 MEDIA_URL = f'https://{AWS_S3_CUSTOM_DOMAIN}/'
 # ==============================================================================
