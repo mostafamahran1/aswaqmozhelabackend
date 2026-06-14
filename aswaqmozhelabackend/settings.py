@@ -15,7 +15,8 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 SECRET_KEY = 'django-insecure-+_uhbip6ikra2&!&mnoq(1w6g1p4%ja)ds+mw@%3jgf-_nn5p0'
 
 # SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = True
+# تم إغلاق الـ DEBUG لحماية السيرفر ومنع تسريب البيانات الحساسة في الإنتاج
+DEBUG = False
 
 # تم إضافة الـ IP الجديد للسيرفر هنا لضمان عمل الاتصال بنجاح
 ALLOWED_HOSTS = ['*', '54.237.36.97', 'localhost', '127.0.0.1', '10.0.2.2']
@@ -51,6 +52,7 @@ INSTALLED_APPS = [
     'rest_framework',
     'rest_framework_simplejwt',
     'django_filters',
+    'storages',  # تم إضافة مكتبة الربط مع AWS S3 هنا
 ]
 
 MIDDLEWARE = [
@@ -116,9 +118,21 @@ STATICFILES_DIRS = [
 
 BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 
-# Media files
-MEDIA_URL = '/media/'
-MEDIA_ROOT = os.path.join(BASE_DIR, 'media')
+# ==============================================================================
+# إعدادات الـ AWS S3 الجديدة لتخزين صور المنتجات وحماية مساحة السيرفر
+# ==============================================================================
+AWS_ACCESS_KEY_ID = 'AKIAYYWHOIXFR4AYYLPJ'
+AWS_SECRET_ACCESS_KEY = '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'
+AWS_STORAGE_BUCKET_NAME = 'aswaq-mozhela-media-storage'
+AWS_S3_REGION_NAME = 'us-east-1'
+
+# تفعيل الـ S3 حصرياً لملفات الميديا (الصور المرفوعة)
+DEFAULT_FILE_STORAGE = 'storages.backends.s3boto3.S3Boto3Storage'
+
+# الروابط التي سيقرأ منها أبلكيشن الفلوتر الصور مباشرة وبسرعة
+AWS_S3_CUSTOM_DOMAIN = f'{AWS_STORAGE_BUCKET_NAME}.s3.amazonaws.com'
+MEDIA_URL = f'https://{AWS_S3_CUSTOM_DOMAIN}/'
+# ==============================================================================
 
 # Rest framework settings
 REST_FRAMEWORK = {
