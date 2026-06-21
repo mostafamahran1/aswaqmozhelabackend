@@ -21,6 +21,7 @@ from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework import status
 from django.conf import settings
+import random
 
 
 MODEL_MAPPING = {
@@ -49,7 +50,12 @@ class GetModelNames(APIView):
 
 def search_all_products(request):
     query = request.GET.get('name', '')
-    if not query:
+    min_price = request.GET.get('min_price', None)
+    max_price = request.GET.get('max_price', None)
+    category = request.GET.get('category', None)  # لفلترة القسم مثل 'Toys' أو 'Supermarket'
+
+    # إذا لم يكن هناك كلمة بحث ولا فلتر مفعل، أرجع قائمة فارغة
+    if not query and not min_price and not max_price and not category:
         return JsonResponse({"products": []})
 
     models = [
@@ -61,9 +67,19 @@ def search_all_products(request):
     products = []
 
     for model in models:
-        results = model.objects.filter(
-            Q(name__icontains=query) | Q(description__icontains=query) | Q(model_name__icontains=query)
-        ).values()
+        # 1. بناء الاستعلام الشرطي الديناميكي
+        filters = Q()
+        if query:
+            filters &= (Q(name__icontains=query) | Q(description__icontains=query) | Q(model_name__icontains=query))
+        if min_price:
+            filters &= Q(price__gte=float(min_price))
+        if max_price:
+            filters &= Q(price__lte=float(max_price))
+        if category and category.strip() != "":
+            filters &= Q(model_name__iexact=category)
+
+        # 2. تنفيذ جلب البيانات من الموديل الحالي
+        results = model.objects.filter(filters).values()
 
         for product in results:
             if product['primary_image']:
@@ -76,7 +92,7 @@ def search_all_products(request):
 
 
 def get_latest_products(request):
-    count = int(request.GET.get('count', 100))  # Default to 10 if not provided
+    count = int(request.GET.get('count', 100))  # الافتراضي 100 منتج
 
     models = [
         PhonesProduct, SheinProduct, FoodsProduct, FavProduct, PharmacyProduct, LibraryProduct,
@@ -87,6 +103,7 @@ def get_latest_products(request):
     all_products = []
 
     for model in models:
+        # جلب أحدث المنتجات من كل موديل
         products = model.objects.all().order_by('-createAT')[:count]
         for product in products:
             product_data = {
@@ -109,13 +126,17 @@ def get_latest_products(request):
             }
             all_products.append(product_data)
 
-    sorted_products = heapq.nlargest(count, all_products, key=lambda x: x['createAT'])
+    # 1. أولاً: هنجيب أحدث المنتجات الكلية بناءً على العدد المطلوب
+    latest_subset = heapq.nlargest(count, all_products, key=lambda x: x['createAT'])
+    
+    # 2. ثانياً: هنعمل خلط عشوائي (Shuffle) لهذه القائمة عشان تظهر بترتيب مختلف كل مرة
+    random.shuffle(latest_subset)
 
-    return JsonResponse({'products': sorted_products})
+    return JsonResponse({'products': latest_subset})
 
 
 def get_discounted_products(request):
-    count = int(request.GET.get('count', 100))  # عدد المنتجات اللي هترجعها، افتراضي 100
+    count = int(request.GET.get('count', 100))
 
     models = [
         PhonesProduct, SheinProduct, FoodsProduct, FavProduct, PharmacyProduct, LibraryProduct,
@@ -126,6 +147,7 @@ def get_discounted_products(request):
     discounted_products = []
 
     for model in models:
+        # جلب المنتجات التي عليها خصم
         products = model.objects.filter(discount_percentage__gt=0).order_by('-createAT')[:count]
         for product in products:
             product_data = {
@@ -148,14 +170,17 @@ def get_discounted_products(request):
             }
             discounted_products.append(product_data)
 
-    # ترتيب كل المنتجات المجمعة من جميع الموديلات حسب تاريخ الإنشاء
-    sorted_discounted_products = heapq.nlargest(count, discounted_products, key=lambda x: x['createAT'])
+    # 1. جلب المنتجات الحاصلة على أعلى خصم أو الأحدث حسب منطقك القديم
+    discounted_subset = heapq.nlargest(count, discounted_products, key=lambda x: x['createAT'])
+    
+    # 2. خلط المنتجات عشوائياً قبل إرسالها للعميل
+    random.shuffle(discounted_subset)
 
-    return JsonResponse({'products': sorted_discounted_products})
+    return JsonResponse({'products': discounted_subset})
 
 
 def get_best_selling_products(request):
-    count = int(request.GET.get('count', 100))  # جلب أعلى 100 منتج مبيعاً
+    count = int(request.GET.get('count', 20))  # جلب أعلى 100 منتج مبيعاً
 
     models = [
         PhonesProduct, SheinProduct, FoodsProduct, FavProduct, PharmacyProduct, LibraryProduct,

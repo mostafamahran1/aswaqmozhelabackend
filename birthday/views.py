@@ -14,12 +14,18 @@ def get_all_products(request):
     # التحقق مما إذا كان المستخدم يريد عرض جميع المنتجات
     show_all = request.GET.get('all', 'false').lower() == 'true'
 
+    # 1. جلب المنتجات النشطة أولاً بدون ترتيب عشوائي لضمان سرعة العمليات التالية
     queryset = BirthdayProduct.objects.filter(is_active=True)
 
-    # تطبيق الفلاتر على جميع المنتجات
-    filterset = ProductsFilter(request.GET, queryset=queryset.order_by('id'))
+    # تطبيق الفلاتر على المنتجات
+    filterset = ProductsFilter(request.GET, queryset=queryset)
     queryset = filterset.qs
-    count = queryset.count()  # إجمالي عدد المنتجات
+    
+    # حساب العدد الإجمالي (هنا الـ Count هيكون طلقة وسريع جداً)
+    count = queryset.count()  
+
+    # 2. الآن نطبق الترتيب العشوائي بعد انتهاء الفلترة والعد بنجاح 🎲
+    queryset = queryset.order_by('?')
 
     if not show_all:
         # تطبيق Pagination إذا لم يتم طلب جميع المنتجات
@@ -28,7 +34,7 @@ def get_all_products(request):
         paginator.page_size = resPage
         queryset = paginator.paginate_queryset(queryset, request)
 
-    # تسلسل البيانات
+    # تسلسل البيانات (Serialization)
     serializer = ProductSerializer(queryset, many=True, context={'request': request})
 
     # إرجاع النتائج

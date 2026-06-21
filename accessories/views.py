@@ -14,10 +14,11 @@ def get_all_products(request):
     # التحقق مما إذا كان المستخدم يريد عرض جميع المنتجات
     show_all = request.GET.get('all', 'false').lower() == 'true'
 
-    queryset = AccessoriesProduct.objects.filter(is_active=True)
+    # استخدام order_by('?') لجلب المنتجات بترتيب عشوائي مباشرة من قاعدة البيانات
+    queryset = AccessoriesProduct.objects.filter(is_active=True).order_by('?')
 
-    # تطبيق الفلاتر على جميع المنتجات
-    filterset = ProductsFilter(request.GET, queryset=queryset.order_by('id'))
+    # تطبيق الفلاتر على المنتجات العشوائية
+    filterset = ProductsFilter(request.GET, queryset=queryset)
     queryset = filterset.qs
     count = queryset.count()  # إجمالي عدد المنتجات
 

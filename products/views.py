@@ -11,19 +11,30 @@ from django.db.models import Avg
 
 @api_view(['GET'])
 def get_all_products(request):
+    # التحقق مما إذا كان المستخدم يريد عرض جميع المنتجات
     show_all = request.GET.get('all', 'false').lower() == 'true'
+
+    # 1. جلب المنتجات النشطة أولاً بدون ترتيب عشوائي لسرعة الفلترة والعد
     queryset = LibraryProduct.objects.filter(is_active=True)
-    filterset = ProductsFilter(request.GET, queryset=queryset.order_by('id'))
+
+    # تطبيق الفلاتر على المنتجات
+    filterset = ProductsFilter(request.GET, queryset=queryset)
     queryset = filterset.qs
-    count = queryset.count() 
+    
+    # حساب العدد الإجمالي للمنتجات المفلترة (خفيف وسريع جداً على قاعدة البيانات)
+    count = queryset.count()  
+
+    # 2. تطبيق الترتيب العشوائي الآن بعد انتهاء عمليات الفلترة والعد 🎲
+    queryset = queryset.order_by('?')
 
     if not show_all:
+        # تطبيق Pagination إذا لم يتم طلب جميع المنتجات
         resPage = 12
         paginator = PageNumberPagination()
         paginator.page_size = resPage
         queryset = paginator.paginate_queryset(queryset, request)
 
-    # تسلسل البيانات
+    # تسلسل البيانات وتحويلها لـ JSON
     serializer = ProductSerializer(queryset, many=True, context={'request': request})
 
     # إرجاع النتائج
