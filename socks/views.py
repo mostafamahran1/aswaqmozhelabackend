@@ -7,7 +7,10 @@ from .filters import ProductsFilter
 from .models import SocksProduct, SocksReview
 from .serializers import ProductSerializer
 from rest_framework.pagination import PageNumberPagination
-from django.db.models import Avg
+from django.db.models import Avg , Count
+from django.contrib.contenttypes.models import ContentType
+from allproducts.models import ProductVariant
+import json
 
 @api_view(['GET'])
 def get_all_products(request):
@@ -15,7 +18,11 @@ def get_all_products(request):
     show_all = request.GET.get('all', 'false').lower() == 'true'
 
     # 1. جلب المنتجات النشطة أولاً بدون ترتيب عشوائي لسرعة الفلترة والعد
-    queryset = SocksProduct.objects.filter(is_active=True)
+    queryset = SocksProduct.objects.filter(is_active=True)\
+        .annotate(variants_count=Count('variants'))\
+        .filter(variants_count__gt=0)\
+        .prefetch_related('variants')\
+        .order_by('?')
 
     # تطبيق الفلاتر على المنتجات
     filterset = ProductsFilter(request.GET, queryset=queryset)
@@ -23,9 +30,6 @@ def get_all_products(request):
     
     # حساب العدد الإجمالي للمنتجات المفلترة (سريع وخفيف جداً على قاعدة البيانات)
     count = queryset.count()  
-
-    # 2. تطبيق الترتيب العشوائي الآن بعد انتهاء عمليات الفلترة والعد 🎲
-    queryset = queryset.order_by('?')
 
     if not show_all:
         # تطبيق Pagination إذا لم يتم طلب جميع المنتجات
@@ -46,7 +50,7 @@ def get_all_products(request):
 
 @api_view(['GET'])
 def get_by_id_product(request, pk):
-    product = get_object_or_404(SocksProduct, id=pk)
+    product = get_object_or_404(SocksProduct.objects.prefetch_related('variants'), id=pk)
     serializer = ProductSerializer(product, many=False, context={'request': request})
     return Response({"product": serializer.data})
 
@@ -73,6 +77,33 @@ def new_product(request):
             is_available=data.get('is_available', True)
         )
         product.save()
+        # --- الجزء الخاص برفع الألوان عبر الـ API عند إنشاء منتج جديد ---
+        variants_data = request.data.get('variants_json') 
+        if variants_data:
+            try:
+                variants_list = json.loads(variants_data)
+                content_type = ContentType.objects.get_for_model(SocksProduct)
+                
+                # استخدام enumerate للحصول على الـ index لالتقاط الملفات بشكل ديناميكي
+                for index, v_data in enumerate(variants_list):
+                    ProductVariant.objects.create(
+                        content_type=content_type,
+                        object_id=product.id,
+                        color_name=v_data.get('color_name'),
+                        color_code=v_data.get('color_code'),
+                        size=v_data.get('size'),
+                        original_price=v_data.get('original_price', product.original_price),
+                        discount_percentage=v_data.get('discount_percentage', product.discount_percentage),
+                        stock=v_data.get('stock', 0),
+                        is_active=v_data.get('is_active', True),
+                        # التقاط ملفات الصور من request.FILES بناءً على الـ index
+                        variant_image1=request.FILES.get(f'variant_{index}_image1'),
+                        variant_image2=request.FILES.get(f'variant_{index}_image2'),
+                        variant_image3=request.FILES.get(f'variant_{index}_image3'),
+                    )
+            except Exception as e:
+                pass
+
         res = ProductSerializer(product, many=False, context={'request': request})
         return Response({"product": res.data})
     else:
@@ -106,6 +137,62 @@ def update_product(request, pk):
     product.is_available = is_available_str == 'true'
 
     product.save()
+    # 2. تحديث إدارة المتغيرات (الألوان والمقاسات والصور)
+    variants_data = request.data.get('variants_json')
+    if variants_data:
+        try:
+            variants_list = json.loads(variants_data)
+            content_type = ContentType.objects.get_for_model(SocksProduct)
+            
+            # مصفوفة لحفظ الـ IDs الخاصة بالمتغيرات التي نريد الإبقاء عليها
+            keep_variant_ids = []
+            
+            for index, v_data in enumerate(variants_list):
+                variant_id = v_data.get('id')  # لو المتغير موجود من قبل، الفرونت هيبعت الـ id بتاعه
+                
+                # تجهيز الحقول النصية والرقمية للمتغير
+                variant_fields = {
+                    'color_name': v_data.get('color_name'),
+                    'color_code': v_data.get('color_code'),
+                    'size': v_data.get('size'),
+                    'original_price': v_data.get('original_price', product.original_price),
+                    'discount_percentage': v_data.get('discount_percentage', product.discount_percentage),
+                    'stock': v_data.get('stock', 0),
+                }
+                
+                # التقاط الصور الجديدة الديناميكية إذا تم رفعها من الفرونت
+                # الفرونت إند (Flutter) هيبعتها في الـ FILES بـ Keys واضحة مثل: variant_0_image1
+                img1 = request.FILES.get(f'variant_{index}_image1')
+                img2 = request.FILES.get(f'variant_{index}_image2')
+                img3 = request.FILES.get(f'variant_{index}_image3')
+                
+                if img1: variant_fields['variant_image1'] = img1
+                if img2: variant_fields['variant_image2'] = img2
+                if img3: variant_fields['variant_image3'] = img3
+
+                if variant_id:
+                    # [تعديل] المتغير موجود بالفعل في قاعدة البيانات
+                    variant = ProductVariant.objects.filter(id=variant_id, content_type=content_type, object_id=product.id).first()
+                    if variant:
+                        for attr, value in variant_fields.items():
+                            setattr(variant, attr, value)
+                        variant.save()
+                        keep_variant_ids.append(variant.id)
+                else:
+                    # [إنشاء] متغير جديد تماماً تم إضافته أثناء التعديل
+                    new_variant = ProductVariant.objects.create(
+                        content_type=content_type,
+                        object_id=product.id,
+                        **variant_fields
+                    )
+                    keep_variant_ids.append(new_variant.id)
+            
+            # [حذف] أي متغيرات قديمة لم تعد موجودة في القائمة القادمة من الفرونت إند
+            product.variants.exclude(id__in=keep_variant_ids).delete()
+
+        except Exception as e:
+            # يمكنك طباعة الخطأ لمعرفته أثناء التستنج: print(e)
+            pass
     serializer = ProductSerializer(product, many=False, context={'request': request})
     return Response({"product": serializer.data})
 

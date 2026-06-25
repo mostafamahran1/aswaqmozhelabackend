@@ -3,6 +3,7 @@ from rest_framework.decorators import api_view , permission_classes
 from rest_framework.response import Response
 from rest_framework.permissions import AllowAny, IsAuthenticated , IsAdminUser , BasePermission
 from rest_framework import status
+from allproducts.models import ProductVariant
 from products.models import LibraryProduct
 from django.db import transaction
 from shein.models import SheinProduct
@@ -101,162 +102,163 @@ def get_governorates(request):
         ]
     })
 
+from decimal import Decimal
+
 @api_view(['POST'])
 @permission_classes([IsAuthenticated])
 def new_order(request):
     user = request.user
     data = request.data
 
-    order_items = data.get('order_Items', [])
+    # 💡 تنويه: تأكد أن الاسم في الفرونت اند Flutter مطابق تماماً لـ 'order_items'
+    order_items = data.get('order_items', data.get('order_Items', []))
     coupon_code = data.get('coupon_code', None)
     state = data.get('state', 'default_state')
 
     if not order_items:
-        return Response(
-            {'error': 'No order items received'},
-            status=status.HTTP_400_BAD_REQUEST
-        )
+        return Response({'error': 'No order items received'}, status=status.HTTP_400_BAD_REQUEST)
 
     product_model_map = {
-        'Shein': SheinProduct,
-        'Foods': FoodsProduct,
-        'Fav': FavProduct,
-        'Pharmacy': PharmacyProduct,
-        'Phones': PhonesProduct,
-        'Spices': SpicesProduct,
-        'Supermarket': SupermarketProduct,
-        'Toys': ToysProduct,
-        'Veils': VeilsProduct,
-        'Socks': SocksProduct,
-        'Birthday': BirthdayProduct,
-        'Gifts': GiftsProduct,
-        'Accessories': AccessoriesProduct,
-        'Library': LibraryProduct
+        'Shein': SheinProduct, 'Foods': FoodsProduct, 'Fav': FavProduct,
+        'Pharmacy': PharmacyProduct, 'Phones': PhonesProduct, 'Spices': SpicesProduct,
+        'Supermarket': SupermarketProduct, 'Toys': ToysProduct, 'Veils': VeilsProduct,
+        'Socks': SocksProduct, 'Birthday': BirthdayProduct, 'Gifts': GiftsProduct,
+        'Accessories': AccessoriesProduct, 'Library': LibraryProduct
     }
 
     try:
         with transaction.atomic():
-
             # ========================
             # 1️⃣ CALCULATE SUBTOTAL
             # ========================
-            subtotal = 0
+            subtotal = Decimal('0.00')
 
             for item in order_items:
                 product_id = item['product']
                 model_name = item['model_name']
-                quantity = item['quantity']
+                quantity = int(item['quantity'])
+                variant_id = item.get('variant_id')
 
                 ProductModel = product_model_map.get(model_name)
-
                 if not ProductModel:
-                    return Response(
-                        {'error': f'Invalid model name: {model_name}'},
-                        status=status.HTTP_400_BAD_REQUEST
-                    )
+                    return Response({'error': f'Invalid model name: {model_name}'}, status=status.HTTP_400_BAD_REQUEST)
 
                 product = ProductModel.objects.filter(id=product_id).first()
-
                 if not product:
-                    return Response(
-                        {'error': f'Product not found: {product_id}'},
-                        status=status.HTTP_400_BAD_REQUEST
-                    )
+                    return Response({'error': f'Product not found: {product_id}'}, status=status.HTTP_400_BAD_REQUEST)
 
-                subtotal += float(product.price) * quantity
+                if variant_id:
+                    variant = ProductVariant.objects.filter(id=variant_id).first()
+                    if not variant:
+                        return Response({'error': f'Variant not found: {variant_id}'}, status=status.HTTP_400_BAD_REQUEST)
+                    if variant.stock < quantity:
+                        return Response({'error': f'Not enough stock for variant: {variant.color_name}'}, status=status.HTTP_400_BAD_REQUEST)
+                    
+                    # استخدام السعر المحسوب تلقائياً من الموديل بدقة Decimal
+                    item_price = variant.price
+                else:
+                    if product.stock < quantity:
+                        return Response({'error': f'Not enough stock for product: {product.name}'}, status=status.HTTP_400_BAD_REQUEST)
+                    item_price = product.price
+
+                subtotal += item_price * quantity
 
             # ========================
-            # 2️⃣ DELIVERY FEE
+            # 2️⃣ DELIVERY FEE & TOTAL
             # ========================
-            delivery_fee = calculate_delivery_fee(state)
-
+            delivery_fee = Decimal(str(calculate_delivery_fee(state)))
             total_amount = subtotal + delivery_fee
 
             # ========================
             # 3️⃣ COUPON SYSTEM
             # ========================
             coupon_obj = None
-            discount = 0
+            discount = Decimal('0.00')
 
             if coupon_code:
                 try:
-                    coupon_obj = Coupon.objects.get(
-                        code=coupon_code,
-                        is_active=True
-                    )
-
-                    from django.utils import timezone
-
+                    coupon_obj = Coupon.objects.get(code=coupon_code, is_active=True)
                     if coupon_obj.expiry_date < timezone.now():
-                        return Response(
-                            {'error': 'Coupon expired'},
-                            status=status.HTTP_400_BAD_REQUEST
-                        )
-
+                        return Response({'error': 'Coupon expired'}, status=status.HTTP_400_BAD_REQUEST)
                     if subtotal < coupon_obj.min_order_amount:
-                        return Response(
-                            {'error': 'Order does not meet minimum amount for this coupon'},
-                            status=status.HTTP_400_BAD_REQUEST
-                        )
+                        return Response({'error': f'Minimum order is {coupon_obj.min_order_amount}'}, status=status.HTTP_400_BAD_REQUEST)
 
                     if coupon_obj.discount_percent > 0:
-                         discount = (subtotal * coupon_obj.discount_percent) / 100
+                        discount = (subtotal * coupon_obj.discount_percent) / 100
                     else:
-                        discount = min(
-                            float(coupon_obj.discount_amount),
-                            subtotal
-                        )
+                        discount = min(coupon_obj.discount_amount, subtotal)
 
                     total_amount = subtotal - discount + delivery_fee
-
                 except Coupon.DoesNotExist:
-                    return Response(
-                        {'error': 'Invalid coupon'},
-                        status=status.HTTP_400_BAD_REQUEST
-                    )
+                    return Response({'error': 'Invalid coupon'}, status=status.HTTP_400_BAD_REQUEST)
 
             # ========================
             # 4️⃣ CREATE ORDER
             # ========================
             order = Order.objects.create(
-                user=user,
-                city=data['city'],
-                zip_code=data['zip_code'],
-                street=data['street'],
-                state=state,
-                phone_no=data['phone_no'],
-                country=data['country'],
-                total_amount=total_amount,
-                coupon=coupon_obj,
-                discount_amount=discount
+                user=user, city=data['city'], zip_code=data['zip_code'],
+                street=data['street'], state=state, phone_no=data['phone_no'],
+                country=data['country'], total_amount=total_amount,
+                coupon=coupon_obj, discount_amount=discount
             )
 
             # ========================
-            # 5️⃣ CREATE ORDER ITEMS
+            # 5️⃣ CREATE ORDER ITEMS & UPDATE STOCK
             # ========================
             for item in order_items:
                 product_id = item['product']
                 model_name = item['model_name']
-                quantity = item['quantity']
+                quantity = int(item['quantity'])
+                variant_id = item.get('variant_id')
 
                 ProductModel = product_model_map.get(model_name)
                 product = ProductModel.objects.get(id=product_id)
 
+                variant_obj = None
+                color_name, color_code, size = None, None, None
+                item_price = product.price
+                
+                # معالجة ذكية للرابط سواء كان محلي أو على AWS S3
+                def get_absolute_url(image_field):
+                    if not image_field:
+                        return None
+                    if image_field.url.startswith('http'):
+                        return image_field.url
+                    return request.build_absolute_uri(image_field.url)
+
+                item_image = get_absolute_url(product.primary_image)
+
+                if variant_id:
+                    variant_obj = ProductVariant.objects.get(id=variant_id)
+                    item_price = variant_obj.price
+                    color_name = variant_obj.color_name
+                    color_code = variant_obj.color_code
+                    size = variant_obj.size
+                    
+                    if variant_obj.variant_image1:
+                        item_image = get_absolute_url(variant_obj.variant_image1)
+
                 OrderItem.objects.create(
                     content_type=ContentType.objects.get_for_model(product),
                     object_id=product.id,
+                    variant=variant_obj,
+                    color_name=color_name,
+                    color_code=color_code,
+                    size=size,
                     order=order,
                     name=product.name,
                     quantity=quantity,
-                    price=product.price,
-                    primary_image=(
-                        request.build_absolute_uri(product.primary_image.url)
-                        if product.primary_image else None
-                    )
+                    price=item_price,
+                    primary_image=item_image
                 )
 
-                # update stock
-                product.stock -= quantity
+                # إدارة خصم المخازن
+                if variant_obj:
+                    variant_obj.stock -= quantity
+                    variant_obj.save()
+                else:
+                    product.stock -= quantity
+                
                 product.orders_count += quantity
                 product.save()
 
@@ -264,22 +266,18 @@ def new_order(request):
 
             return Response({
                 "order": serializer.data,
-                "subtotal": subtotal,
-                "delivery_fee": delivery_fee,
-                "discount_amount": discount,
+                "subtotal": float(subtotal),
+                "delivery_fee": float(delivery_fee),
+                "discount_amount": float(discount),
                 "coupon_used": coupon_obj is not None,
-                "total_amount": total_amount
+                "total_amount": float(total_amount)
             })
 
     except Exception as e:
-        return Response(
-            {'error': str(e)},
-            status=status.HTTP_500_INTERNAL_SERVER_ERROR
-        )
+        return Response({'error': str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+    
 
-# ================================
-# 🔥 COUPON VALIDATION API
-# ================================
+    
 
 from django.utils import timezone
 

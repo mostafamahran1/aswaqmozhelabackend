@@ -48,6 +48,14 @@ class OrderItem(models.Model):
     object_id = models.PositiveIntegerField(null=True)  # جعل الحقل nullable
     product = GenericForeignKey('content_type', 'object_id')
 
+    # 🔗 الربط مع المتغير المحدد (يجوز أن يكون فارغاً لو المنتج ملوش ألوان/مقاسات)
+    variant = models.ForeignKey('allproducts.ProductVariant', null=True, blank=True, on_delete=models.SET_NULL, related_name='order_items')
+    
+    # 📸 كاش لحفظ تفاصيل المتغير وقت الشراء لحماية الفواتير القديمة من التعديل
+    color_name = models.CharField(max_length=100, blank=True, null=True)
+    color_code = models.CharField(max_length=50, blank=True, null=True)
+    size = models.CharField(max_length=50, blank=True, null=True)
+
     order = models.ForeignKey(Order, null=True, on_delete=models.CASCADE, related_name='orderitems')
     name = models.CharField(max_length=200, default="", blank=False)
     quantity = models.IntegerField(default=1)
@@ -55,7 +63,7 @@ class OrderItem(models.Model):
     primary_image = models.URLField(max_length=200, blank=True, null=True)
 
     def __str__(self):
-        return self.name
+        return f"{self.name} ({self.color_name or 'No Variant'})"
 
 # models.py
 
