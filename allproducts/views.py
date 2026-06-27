@@ -231,3 +231,63 @@ def get_best_selling_products(request):
     sorted_best_sellers = heapq.nlargest(count, best_selling_products, key=lambda x: x['orders_count'])
 
     return JsonResponse({'products': sorted_best_sellers})
+
+
+def get_similar_products(request):
+    """
+    جلب المنتجات المشابهة لمنتج معين من خلال الـ 14 موديل.
+    يعتمد التشابه على نفس الـ model_name (القسم) مع استبعاد المنتج الحالي.
+    """
+    product_id_str = request.GET.get('product_id')
+    model_name = request.GET.get('model_name')
+    count = int(request.GET.get('count', 6)) # الافتراضي جلب 6 منتجات مشابهة
+
+    # 1. التحقق من المدخلات الأساسية لتجنب الكراش
+    if not product_id_str or not model_name:
+        return JsonResponse({"products": [], "error": "Missing product_id or model_name parameters"}, status=400)
+
+    try:
+        product_id = int(product_id_str)
+    except ValueError:
+        return JsonResponse({"products": [], "error": "Invalid product_id"}, status=400)
+
+    # 2. الحصول على الموديل الصحيح من الـ Mapping بناءً على الـ model_name المرسل
+    target_model = MODEL_MAPPING.get(model_name)
+    
+    if not target_model:
+        return JsonResponse({"products": []}) # إذا كان القسم غير معروف نرجع مصفوفة فارغة بأمان
+
+    # 3. جلب المنتجات النشطة والمتاحة من نفس القسم واستبعاد المنتج الأصلي
+    # استخدمنا order_by('?') لجلب عشوائي متجدد لزيادة تفاعل العميل، مع prefetch للـ variants
+    similar_results = target_model.objects.filter(
+        model_name=model_name,
+        is_active=True,
+        is_available=True
+    ).exclude(id=product_id).prefetch_related('variants').order_by('?')[:count]
+
+    similar_products = []
+
+    # 4. تنسيق البيانات بنفس بنية البيانات التي يتوقعها الـ Flutter الفرونت إند عندك
+    for product in similar_results:
+        product_data = {
+            'id': product.id,
+            'name': product.name,
+            'model_name': product.model_name,
+            'price': float(product.price),
+            'original_price': float(product.original_price),
+            'discount_percentage': float(product.discount_percentage),
+            'createAT': product.createAT,
+            'primary_image': request.build_absolute_uri(product.primary_image.url) if product.primary_image else request.build_absolute_uri(static('products/placeholder.jpg')),
+            'secondary_image1': request.build_absolute_uri(product.secondary_image1.url) if product.secondary_image1 else request.build_absolute_uri(static('products/placeholder.jpg')),
+            'secondary_image2': request.build_absolute_uri(product.secondary_image2.url) if product.secondary_image2 else request.build_absolute_uri(static('products/placeholder.jpg')),
+            'description': product.description,
+            'stock': product.stock,
+            'delivery_days': product.delivery_days,
+            'is_active': product.is_active,
+            'is_available': product.is_available,
+            'user': product.user.id if product.user else None,
+            'variants': get_product_variants_list(product, request) # هنا استدعينا الدالة السحرية للألوان والمقاسات
+        }
+        similar_products.append(product_data)
+
+    return JsonResponse({'products': similar_products})
