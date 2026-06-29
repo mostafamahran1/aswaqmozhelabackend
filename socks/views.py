@@ -19,8 +19,6 @@ def get_all_products(request):
 
     # 1. جلب المنتجات النشطة أولاً بدون ترتيب عشوائي لسرعة الفلترة والعد
     queryset = SocksProduct.objects.filter(is_active=True)\
-        .annotate(variants_count=Count('variants'))\
-        .filter(variants_count__gt=0)\
         .prefetch_related('variants')\
         .order_by('?')
 
