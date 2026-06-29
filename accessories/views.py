@@ -20,8 +20,6 @@ def get_all_products(request):
 
     # استخدام order_by('?') لجلب المنتجات بترتيب عشوائي مباشرة من قاعدة البيانات
     queryset = AccessoriesProduct.objects.filter(is_active=True)\
-        .annotate(variants_count=Count('variants'))\
-        .filter(variants_count__gt=0)\
         .prefetch_related('variants')\
         .order_by('?')
 
