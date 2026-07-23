@@ -65,7 +65,6 @@ class OrderItem(models.Model):
     def __str__(self):
         return f"{self.name} ({self.color_name or 'No Variant'})"
 
-# models.py
 
 class Coupon(models.Model):
     code = models.CharField(max_length=50, unique=True)
@@ -77,7 +76,7 @@ class Coupon(models.Model):
 
     def __str__(self):
         return self.code
-    
+
 
 class DeliveryGovernorate(models.Model):
     name = models.CharField(max_length=100, unique=True)
@@ -85,3 +84,16 @@ class DeliveryGovernorate(models.Model):
 
     def __str__(self):
         return f"{self.name} - {self.delivery_fee} EGP"
+
+
+# 🆕 موديل تتبع استخدام الكوبونات لكل مستخدم
+class CouponUsage(models.Model):
+    user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='coupon_usages')
+    coupon = models.ForeignKey(Coupon, on_delete=models.CASCADE, related_name='usages')
+    used_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        unique_together = ('user', 'coupon')  # منع تكرار التسجيل في الداتابيز لنفس المستخدم والكوبون
+
+    def __str__(self):
+        return f"{self.user.username} - {self.coupon.code}"

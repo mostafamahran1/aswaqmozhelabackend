@@ -1,5 +1,6 @@
 from django.contrib import admin
-from .models import Order, OrderItem, Coupon, DeliveryGovernorate
+# 🆕 إضافة CouponUsage للـ imports
+from .models import Order, OrderItem, Coupon, DeliveryGovernorate, CouponUsage
 
 # 1️⃣ عرض حقول المنتجات كـ "سطور مدمجة" جوة الفاتورة الأساسية
 class OrderItemInline(admin.TabularInline):
@@ -65,3 +66,12 @@ class CouponAdmin(admin.ModelAdmin):
 class DeliveryGovernorateAdmin(admin.ModelAdmin):
     list_display = ['name', 'delivery_fee']
     search_fields = ['name']
+
+
+# 5️⃣ 🆕 تخصيص شاشة متابعة استخدام الكوبونات
+@admin.register(CouponUsage)
+class CouponUsageAdmin(admin.ModelAdmin):
+    list_display = ['user', 'coupon', 'used_at']
+    list_filter = ['used_at', 'coupon']
+    search_fields = ['user__username', 'coupon__code']
+    readonly_fields = ['user', 'coupon', 'used_at']

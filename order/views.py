@@ -22,7 +22,10 @@ from birthday.models import BirthdayProduct
 from gifts.models import GiftsProduct
 from accessories.models import AccessoriesProduct
 from .serializers import OrderSerializer
-from .models import Order,OrderItem,Coupon,DeliveryGovernorate
+from .models import Order, OrderItem, Coupon, DeliveryGovernorate, CouponUsage
+from django.utils import timezone
+from decimal import Decimal
+
 # Create your views here.
 
 
@@ -102,7 +105,6 @@ def get_governorates(request):
         ]
     })
 
-from decimal import Decimal
 
 @api_view(['POST'])
 @permission_classes([IsAuthenticated])
@@ -183,6 +185,10 @@ def new_order(request):
                     if subtotal < coupon_obj.min_order_amount:
                         return Response({'error': f'Minimum order is {coupon_obj.min_order_amount}'}, status=status.HTTP_400_BAD_REQUEST)
 
+                    # 🆕 فحص هل استعمل المستخدم الكوبون ده من قبل؟
+                    if CouponUsage.objects.filter(user=user, coupon=coupon_obj).exists():
+                        return Response({'error': 'You have already used this coupon'}, status=status.HTTP_400_BAD_REQUEST)
+
                     if coupon_obj.discount_percent > 0:
                         discount = (subtotal * coupon_obj.discount_percent) / 100
                     else:
@@ -201,6 +207,10 @@ def new_order(request):
                 country=data['country'], total_amount=total_amount,
                 coupon=coupon_obj, discount_amount=discount
             )
+
+            # 🆕 تسجيل استخدام الكوبون للمستخدم الحالي
+            if coupon_obj:
+                CouponUsage.objects.create(user=user, coupon=coupon_obj)
 
             # ========================
             # 5️⃣ CREATE ORDER ITEMS & UPDATE STOCK
@@ -275,11 +285,7 @@ def new_order(request):
 
     except Exception as e:
         return Response({'error': str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
-    
 
-    
-
-from django.utils import timezone
 
 @api_view(['POST'])
 @permission_classes([IsAuthenticated])
@@ -287,6 +293,7 @@ def validate_coupon(request):
 
     coupon_code = request.data.get("coupon_code")
     subtotal = float(request.data.get("subtotal", 0))
+    user = request.user  # 🆕 استخدام المستخدم للتحقق من الاستخدام السطحي
 
     if not coupon_code:
         return Response({
@@ -310,6 +317,13 @@ def validate_coupon(request):
             return Response({
                 "valid": False,
                 "message": f"Minimum order is {coupon.min_order_amount}"
+            }, status=400)
+
+        # 🆕 فحص هل استعمل المستخدم الكوبون سابقاً
+        if CouponUsage.objects.filter(user=user, coupon=coupon).exists():
+            return Response({
+                "valid": False,
+                "message": "You have already used this coupon"
             }, status=400)
 
         return Response({
