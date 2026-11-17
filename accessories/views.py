@@ -18,10 +18,10 @@ def get_all_products(request):
     # التحقق مما إذا كان المستخدم يريد عرض جميع المنتجات
     show_all = request.GET.get('all', 'false').lower() == 'true'
 
-    # استخدام order_by('?') لجلب المنتجات بترتيب عشوائي مباشرة من قاعدة البيانات
+    # newest first; random order made every category list slow
     queryset = AccessoriesProduct.objects.filter(is_active=True)\
         .prefetch_related('variants')\
-        .order_by('?')
+        .order_by('-createAT')
 
     # تطبيق الفلاتر على المنتجات العشوائية
     filterset = ProductsFilter(request.GET, queryset=queryset)

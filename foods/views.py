@@ -20,7 +20,7 @@ def get_all_products(request):
     # 1. جلب المنتجات المتاحة أولاً بدون ترتيب عشوائي لضمان سرعة الفلترة والـ Count
     queryset = FoodsProduct.objects.filter(is_active=True)\
         .prefetch_related('variants')\
-        .order_by('?')
+        .order_by('-createAT')
 
     # تطبيق الفلاتر على المنتجات
     filterset = ProductsFilter(request.GET, queryset=queryset)

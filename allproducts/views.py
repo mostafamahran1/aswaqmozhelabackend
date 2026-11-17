@@ -258,12 +258,12 @@ def get_similar_products(request):
         return JsonResponse({"products": []}) # إذا كان القسم غير معروف نرجع مصفوفة فارغة بأمان
 
     # 3. جلب المنتجات النشطة والمتاحة من نفس القسم واستبعاد المنتج الأصلي
-    # استخدمنا order_by('?') لجلب عشوائي متجدد لزيادة تفاعل العميل، مع prefetch للـ variants
+    # similar products follow sales, which stays useful and avoids ORDER BY RANDOM()
     similar_results = target_model.objects.filter(
         model_name=model_name,
         is_active=True,
         is_available=True
-    ).exclude(id=product_id).prefetch_related('variants').order_by('?')[:count]
+    ).exclude(id=product_id).prefetch_related('variants').order_by('-orders_count')[:count]
 
     similar_products = []
 
