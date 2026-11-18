@@ -21,6 +21,7 @@ from socks.models import SocksProduct
 from birthday.models import BirthdayProduct
 from gifts.models import GiftsProduct
 from accessories.models import AccessoriesProduct
+from notifications.services import send_later
 from .serializers import OrderSerializer
 from .models import Order, OrderItem, Coupon, DeliveryGovernorate, CouponUsage
 from django.utils import timezone
@@ -270,9 +271,19 @@ def new_order(request):
                     product.stock -= quantity
                 
                 product.orders_count += quantity
-                product.save()
+                product.save(update_fields=(
+                    ['orders_count'] if variant_obj else ['stock', 'orders_count']
+                ))
 
             serializer = OrderSerializer(order)
+            customer_name = (user.get_full_name() or '').strip() or user.username
+            order_id = order.id
+            send_later(
+                ['admins', 'staff'],
+                'أوردر جديد',
+                f'{customer_name} طلب أوردر رقم {order_id}',
+                {'type': 'order', 'order_id': order_id},
+            )
 
             return Response({
                 "order": serializer.data,

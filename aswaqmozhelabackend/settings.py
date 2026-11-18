@@ -40,6 +40,8 @@ INSTALLED_APPS = [
     'toys.apps.ToysConfig',
     'order.apps.OrderConfig',
     'account.apps.AccountConfig',
+    'notifications.apps.NotificationsConfig',
+    'reviews.apps.ReviewsConfig',
     'products.apps.ProductsConfig',
     'django.contrib.admin',
     'django.contrib.auth',

@@ -1,6 +1,7 @@
 from django.utils import timezone
 from django.db import models
 from django.contrib.auth.models import User
+from utils.images import optimize_model_images
 # استيراد الأدوات الخاصة بالـ Generic Relations
 from django.contrib.contenttypes.models import ContentType
 from django.contrib.contenttypes.fields import GenericForeignKey , GenericRelation
@@ -54,6 +55,9 @@ class BaseProduct(models.Model):
                 self.price = original
         except (ValueError, TypeError):
             self.price = 0  # أو أي قيمة افتراضية
+        optimize_model_images(
+            self, ('primary_image', 'secondary_image1', 'secondary_image2')
+        )
         super().save(*args, **kwargs)
 
 
@@ -99,6 +103,9 @@ class ProductVariant(models.Model):
                 self.price = original
         except (ValueError, TypeError):
             self.price = 0
+        optimize_model_images(
+            self, ('variant_image1', 'variant_image2', 'variant_image3')
+        )
         super().save(*args, **kwargs)
 
     def __str__(self):
