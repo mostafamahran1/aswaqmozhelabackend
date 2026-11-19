@@ -37,7 +37,6 @@ def import_products_from_csv(csv_path, default_user_id):
                 price=float(row['price']),
                 description=row['description'],
                 stock=int(row['stock']),
-                delivery_days=int(row['delivery_days']),
                 is_active=row['is_active'].lower() == 'true',
                 is_available=row['is_available'].lower() == 'true',
                 user=user,

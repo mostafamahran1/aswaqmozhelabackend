@@ -3,7 +3,7 @@ from rest_framework.permissions import AllowAny, IsAuthenticated, BasePermission
 from rest_framework.response import Response
 from rest_framework import status
 
-from .models import CustomerPresence, InboxNotice, NoticeRead
+from .models import AppRelease, CustomerPresence, InboxNotice, NoticeRead
 from .services import send_to_topics
 
 AUDIENCES = {
@@ -40,6 +40,51 @@ def customer_presence(request):
     if sent:
         presence.mark_notified()
     return Response({'sent': sent})
+
+
+@api_view(['GET'])
+@permission_classes([AllowAny])
+def app_release(request):
+    release = AppRelease.objects.order_by('-build_number', '-created_at').first()
+    if release is None:
+        return Response({'build_number': 0})
+    return Response({
+        'version_name': release.version_name,
+        'build_number': release.build_number,
+        'title': release.title,
+        'message': release.message,
+        'store_url': release.store_url,
+    })
+
+
+@api_view(['POST'])
+@permission_classes([IsSuperuser])
+def publish_app_release(request):
+    version_name = str(request.data.get('version_name', '')).strip()
+    try:
+        build_number = int(request.data.get('build_number'))
+    except (TypeError, ValueError):
+        build_number = 0
+    if not version_name or build_number < 1:
+        return Response(
+            {'error': 'version_name and build_number are required'},
+            status=status.HTTP_400_BAD_REQUEST,
+        )
+    release = AppRelease.objects.create(
+        version_name=version_name[:20],
+        build_number=build_number,
+        title=str(request.data.get('title') or 'تحديث جديد').strip()[:120],
+        message=str(
+            request.data.get('message')
+            or 'في تحديث جديد للتطبيق. نزّله دلوقتي عشان تستخدم آخر نسخة.'
+        ).strip(),
+        store_url=str(request.data.get('store_url') or '').strip(),
+    )
+    return Response({
+        'id': release.id,
+        'version_name': release.version_name,
+        'build_number': release.build_number,
+    }, status=status.HTTP_201_CREATED)
 
 
 @api_view(['POST'])

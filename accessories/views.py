@@ -69,7 +69,6 @@ def new_product(request):
             description=data.get('description', ''),
             stock=data['stock'],
             user=request.user,
-            delivery_days=data.get('delivery_days', 1),
             is_active=data.get('is_active', True),
             is_available=data.get('is_available', True)
         )
@@ -125,7 +124,6 @@ def update_product(request, pk):
     product.secondary_image2 = request.FILES.get('secondary_image2', product.secondary_image2)
     product.description = data.get('description', product.description)
     product.stock = data.get('stock', product.stock)
-    product.delivery_days = data.get('delivery_days', product.delivery_days)
     
     is_active_str = str(data.get('is_active', product.is_active)).lower()
     product.is_active = is_active_str == 'true'

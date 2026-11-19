@@ -1,6 +1,6 @@
 from django.contrib import admin
 # 🆕 إضافة CouponUsage للـ imports
-from .models import Order, OrderItem, Coupon, DeliveryGovernorate, CouponUsage
+from .models import Order, OrderItem, Coupon, DeliveryGovernorate, CouponUsage, SavedAddress
 
 # 1️⃣ عرض حقول المنتجات كـ "سطور مدمجة" جوة الفاتورة الأساسية
 class OrderItemInline(admin.TabularInline):
@@ -17,16 +17,20 @@ class OrderItemInline(admin.TabularInline):
 @admin.register(Order)
 class OrderAdmin(admin.ModelAdmin):
     # الحقول اللي هتظهر في الجدول الرئيسي بره
-    list_display = ['id', 'get_customer_name', 'phone_no', 'state', 'total_amount', 'status', 'payment_status', 'createAT']
+    list_display = ['id', 'get_customer_name', 'phone_no', 'state', 'total_amount', 'free_delivery', 'status', 'payment_status', 'createAT']
     
     # فلاتر جانبية سريعة للمتابعة اليومية
-    list_filter = ['status', 'payment_status', 'payment_mode', 'state', 'createAT']
+    list_filter = ['status', 'payment_status', 'payment_mode', 'free_delivery', 'state', 'createAT']
     
     # البحث الذكي (برقم الأوردر، اسم العميل، اليوزر نيم، أو رقم الموبايل)
     search_fields = ['id', 'user__username', 'user__first_name', 'user__last_name', 'phone_no', 'city']
     
     # حمايتها كـ Readonly عشان الموظف يغير "حالة الطلب" بس، وميلعبش في الحسابات والتواريخ
-    readonly_fields = ['total_amount', 'discount_amount', 'createAT', 'coupon']
+    readonly_fields = [
+        'total_amount', 'discount_amount', 'createAT', 'coupon',
+        'delivery_fee', 'standard_delivery_fee', 'free_delivery',
+        'expected_delivery_start', 'expected_delivery_end',
+    ]
     
     # دمج الفاتورة (الـ Inline) هنا
     inlines = [OrderItemInline]
@@ -37,7 +41,12 @@ class OrderAdmin(admin.ModelAdmin):
             'fields': ('user', 'phone_no', 'country', 'state', 'city', 'street', 'zip_code')
         }),
         ('💰 الحسابات والخصومات الفورية', {
-            'fields': ('total_amount', 'coupon', 'discount_amount', 'payment_mode', 'payment_status')
+            'fields': (
+                'total_amount', 'standard_delivery_fee', 'delivery_fee',
+                'free_delivery', 'expected_delivery_start', 'expected_delivery_end',
+                'coupon', 'discount_amount',
+                'payment_mode', 'payment_status',
+            )
         }),
         ('📦 اللوجستيات وحالة الأوردر', {
             'fields': ('status', 'createAT')
@@ -75,3 +84,10 @@ class CouponUsageAdmin(admin.ModelAdmin):
     list_filter = ['used_at', 'coupon']
     search_fields = ['user__username', 'coupon__code']
     readonly_fields = ['user', 'coupon', 'used_at']
+
+
+@admin.register(SavedAddress)
+class SavedAddressAdmin(admin.ModelAdmin):
+    list_display = ['id', 'user', 'label', 'phone_no', 'governorate', 'city', 'is_default']
+    list_filter = ['is_default', 'governorate']
+    search_fields = ['user__username', 'phone_no', 'street', 'city', 'label']

@@ -37,6 +37,11 @@ class Order(models.Model):
     createAT = models.DateTimeField(default=timezone.now)
     coupon = models.ForeignKey('Coupon', null=True, blank=True, on_delete=models.SET_NULL)
     discount_amount = models.DecimalField(max_digits=10, decimal_places=2, default=0)
+    delivery_fee = models.DecimalField(max_digits=10, decimal_places=2, null=True, blank=True)
+    standard_delivery_fee = models.DecimalField(max_digits=10, decimal_places=2, null=True, blank=True)
+    free_delivery = models.BooleanField(default=False)
+    expected_delivery_start = models.DateField(null=True, blank=True)
+    expected_delivery_end = models.DateField(null=True, blank=True)
 
     def __str__(self):
         return str(self.id)
@@ -76,6 +81,31 @@ class Coupon(models.Model):
 
     def __str__(self):
         return self.code
+
+
+class SavedAddress(models.Model):
+    user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='saved_addresses')
+    label = models.CharField(max_length=40, default='البيت')
+    phone_no = models.CharField(max_length=20)
+    governorate = models.CharField(max_length=100)
+    city = models.CharField(max_length=200)
+    street = models.CharField(max_length=500)
+    country = models.CharField(max_length=100, default='مصر')
+    is_default = models.BooleanField(default=False)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ['-is_default', '-created_at']
+        constraints = [
+            models.UniqueConstraint(
+                fields=['user'],
+                condition=models.Q(is_default=True),
+                name='one_default_address_per_user',
+            ),
+        ]
+
+    def __str__(self):
+        return f'{self.user_id} - {self.label}'
 
 
 class DeliveryGovernorate(models.Model):

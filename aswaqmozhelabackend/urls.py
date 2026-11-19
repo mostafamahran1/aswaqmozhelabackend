@@ -5,7 +5,11 @@ from django.conf import settings
 from django.conf.urls.static import static
 from rest_framework_simplejwt.views import TokenObtainPairView
 
+from allproducts.share_page import share_product_json, share_product_page
+
 urlpatterns = [
+    path('p/<str:model_name>/<int:product_id>/', share_product_page, name='share_product_page'),
+    path('api/share/<str:model_name>/<int:product_id>/', share_product_json, name='share_product_json'),
     path('admin/', admin.site.urls),
     path('api/allproducts/', include('allproducts.urls')),
     path('', include('offerspaner.urls')),

@@ -99,6 +99,25 @@ def notify_offer(sender, instance, created, **kwargs):
         logger.exception('Could not prepare an offer notification')
 
 
+def notify_release(sender, instance, created, **kwargs):
+    if not created:
+        return
+    try:
+        send_later(
+            ['customers', 'staff', 'admins'],
+            instance.title or 'تحديث جديد',
+            instance.message,
+            {
+                'type': 'app_update',
+                'build': instance.build_number,
+                'version': instance.version_name,
+                'store_url': instance.store_url or '',
+            },
+        )
+    except Exception:
+        logger.exception('Could not prepare an app update notification')
+
+
 def connect_signals():
     from django.apps import apps
     from offerspaner.models import Image, TopBannerImage
@@ -110,3 +129,6 @@ def connect_signals():
 
     post_save.connect(notify_offer, sender=Image, dispatch_uid='offer-image')
     post_save.connect(notify_offer, sender=TopBannerImage, dispatch_uid='offer-banner')
+
+    from .models import AppRelease
+    post_save.connect(notify_release, sender=AppRelease, dispatch_uid='app-release')

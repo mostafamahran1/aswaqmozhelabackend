@@ -31,6 +31,23 @@ class NoticeRead(models.Model):
         ]
 
 
+class AppRelease(models.Model):
+    version_name = models.CharField(max_length=20)
+    build_number = models.PositiveIntegerField()
+    title = models.CharField(max_length=120, default='تحديث جديد')
+    message = models.TextField(
+        default='في تحديث جديد للتطبيق. نزّله دلوقتي عشان تستخدم آخر نسخة.',
+    )
+    store_url = models.URLField(blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ['-build_number', '-created_at']
+
+    def __str__(self):
+        return f'{self.version_name} ({self.build_number})'
+
+
 class CustomerPresence(models.Model):
     user = models.OneToOneField(User, on_delete=models.CASCADE, related_name='presence')
     last_notified = models.DateTimeField(null=True, blank=True)

@@ -1,7 +1,15 @@
 from django.utils import timezone
 from django.db import models
 from django.contrib.auth.models import User
-from utils.images import optimize_model_images
+from django.core.files.uploadedfile import UploadedFile
+try:
+    from utils.images import optimize_model_images, write_card_image
+except ModuleNotFoundError:
+    def optimize_model_images(*args, **kwargs):
+        return None
+
+    def write_card_image(*args, **kwargs):
+        return None
 # استيراد الأدوات الخاصة بالـ Generic Relations
 from django.contrib.contenttypes.models import ContentType
 from django.contrib.contenttypes.fields import GenericForeignKey , GenericRelation
@@ -36,7 +44,6 @@ class BaseProduct(models.Model):
     stock = models.IntegerField(default=0)
     createAT = models.DateTimeField(default=timezone.now)
     user = models.ForeignKey(User, null=True, on_delete=models.SET_NULL)
-    delivery_days = models.IntegerField(default=1)
     is_active = models.BooleanField(default=True)
     is_available = models.BooleanField(default=True)
     orders_count = models.IntegerField(default=0)
@@ -46,6 +53,7 @@ class BaseProduct(models.Model):
         return self.name
     
     def save(self, *args, **kwargs):
+        update_fields = kwargs.get('update_fields')
         try:
             discount = float(self.discount_percentage)
             original = float(self.original_price)
@@ -55,10 +63,15 @@ class BaseProduct(models.Model):
                 self.price = original
         except (ValueError, TypeError):
             self.price = 0  # أو أي قيمة افتراضية
+        primary_file = getattr(self.primary_image, '_file', None)
+        primary_is_new = isinstance(primary_file, UploadedFile)
         optimize_model_images(
             self, ('primary_image', 'secondary_image1', 'secondary_image2')
         )
         super().save(*args, **kwargs)
+        image_changed = primary_is_new or update_fields is None or 'primary_image' in update_fields
+        if image_changed and self.primary_image:
+            write_card_image(self.primary_image, force=primary_is_new)
 
 
     class Meta:

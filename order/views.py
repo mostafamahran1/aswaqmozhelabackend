@@ -6,6 +6,7 @@ from rest_framework import status
 from allproducts.models import ProductVariant
 from products.models import LibraryProduct
 from django.db import transaction
+from django.db.models import Prefetch
 from shein.models import SheinProduct
 from foods.models import FoodsProduct
 from fruitsandvegetables.models import FavProduct
@@ -22,12 +23,21 @@ from birthday.models import BirthdayProduct
 from gifts.models import GiftsProduct
 from accessories.models import AccessoriesProduct
 from notifications.services import send_later
+from reviews.models import AppFeedback
 from .serializers import OrderSerializer
-from .models import Order, OrderItem, Coupon, DeliveryGovernorate, CouponUsage
+from .delivery_window import delivery_window
+from .models import Order, OrderItem, OrderStatus, Coupon, DeliveryGovernorate, CouponUsage
+from django.contrib.auth.models import User
 from django.utils import timezone
 from decimal import Decimal
 
 # Create your views here.
+
+
+def _with_feedback(queryset):
+    return queryset.prefetch_related(
+        Prefetch('appfeedback_set', queryset=AppFeedback.objects.order_by('-created_at'))
+    )
 
 
 class IsSuperuserOrStaff(BasePermission):
@@ -38,24 +48,24 @@ class IsSuperuserOrStaff(BasePermission):
 @api_view(['GET'])
 @permission_classes([IsAuthenticated])
 def get_all_orders(request):
-    orders = Order.objects.all()
-    serializer = OrderSerializer(orders,many = True)
+    orders = _with_feedback(Order.objects.all())
+    serializer = OrderSerializer(orders, many=True, context={'request': request})
     return Response({'orders':serializer.data})
 
 @api_view(['GET'])
 @permission_classes([IsAuthenticated])
 def get_user_orders(request):
     user = request.user
-    orders = Order.objects.filter(user=user)
-    serializer = OrderSerializer(orders, many=True)
+    orders = _with_feedback(Order.objects.filter(user=user))
+    serializer = OrderSerializer(orders, many=True, context={'request': request})
     return Response({'orders': serializer.data})
 
 @api_view(['GET'])
 @permission_classes([IsAuthenticated])
 def get_order(request,pk):
-    order = get_object_or_404(Order , id = pk)
+    order = get_object_or_404(_with_feedback(Order.objects.all()), id=pk)
 
-    serializer = OrderSerializer(order,many = False)
+    serializer = OrderSerializer(order, many=False, context={'request': request})
     return Response({'order':serializer.data})
 
 
@@ -66,7 +76,7 @@ def process_order(request,pk):
     order.status = request.data['status']
     order.save()
 
-    serializer = OrderSerializer(order,many = False)
+    serializer = OrderSerializer(order, many=False, context={'request': request})
     return Response({'order':serializer.data})
 
 
@@ -89,6 +99,28 @@ def calculate_delivery_fee(state):
         return float(governorate.delivery_fee)
 
     return 35.0
+
+
+def customer_gets_free_delivery(user):
+    """First real order for a customer. Canceled orders do not use the gift."""
+    if not user or not getattr(user, 'is_authenticated', False):
+        return False
+    if user.is_staff or user.is_superuser:
+        return False
+    return not Order.objects.filter(user=user).exclude(
+        status=OrderStatus.CANCELED
+    ).exists()
+
+
+@api_view(['GET'])
+@permission_classes([IsAuthenticated])
+def welcome_offer(request):
+    eligible = customer_gets_free_delivery(request.user)
+    return Response({
+        'eligible': eligible,
+        'user_id': request.user.id,
+        'offer': 'first_order_free_delivery' if eligible else None,
+    })
 
 @api_view(['GET'])
 @permission_classes([AllowAny])
@@ -169,7 +201,10 @@ def new_order(request):
             # ========================
             # 2️⃣ DELIVERY FEE & TOTAL
             # ========================
-            delivery_fee = Decimal(str(calculate_delivery_fee(state)))
+            User.objects.select_for_update().get(pk=user.pk)
+            standard_fee = Decimal(str(calculate_delivery_fee(state))).quantize(Decimal('0.01'))
+            free_delivery = customer_gets_free_delivery(user)
+            delivery_fee = Decimal('0.00') if free_delivery else standard_fee
             total_amount = subtotal + delivery_fee
 
             # ========================
@@ -202,11 +237,17 @@ def new_order(request):
             # ========================
             # 4️⃣ CREATE ORDER
             # ========================
+            arrival_start, arrival_end = delivery_window()
             order = Order.objects.create(
                 user=user, city=data['city'], zip_code=data['zip_code'],
                 street=data['street'], state=state, phone_no=data['phone_no'],
                 country=data['country'], total_amount=total_amount,
-                coupon=coupon_obj, discount_amount=discount
+                coupon=coupon_obj, discount_amount=discount,
+                delivery_fee=delivery_fee,
+                standard_delivery_fee=standard_fee,
+                free_delivery=free_delivery,
+                expected_delivery_start=arrival_start,
+                expected_delivery_end=arrival_end,
             )
 
             # 🆕 تسجيل استخدام الكوبون للمستخدم الحالي
@@ -275,7 +316,7 @@ def new_order(request):
                     ['orders_count'] if variant_obj else ['stock', 'orders_count']
                 ))
 
-            serializer = OrderSerializer(order)
+            serializer = OrderSerializer(order, context={'request': request})
             customer_name = (user.get_full_name() or '').strip() or user.username
             order_id = order.id
             send_later(
@@ -289,6 +330,10 @@ def new_order(request):
                 "order": serializer.data,
                 "subtotal": float(subtotal),
                 "delivery_fee": float(delivery_fee),
+                "standard_delivery_fee": float(standard_fee),
+                "free_delivery": free_delivery,
+                "expected_delivery_start": arrival_start.isoformat(),
+                "expected_delivery_end": arrival_end.isoformat(),
                 "discount_amount": float(discount),
                 "coupon_used": coupon_obj is not None,
                 "total_amount": float(total_amount)

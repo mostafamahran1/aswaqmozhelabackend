@@ -4,6 +4,7 @@ import json
 from django.http import JsonResponse
 from django.db.models import Q
 from django.templatetags.static import static
+from .search_text import score_product
 from django.conf import settings
 from rest_framework.views import APIView
 from rest_framework.response import Response
@@ -76,6 +77,40 @@ def get_product_variants_list(product, request):
     return variants_data
 
 
+def _search_by_text(request, models, query, min_price, max_price, category):
+    ranked = []
+    for model in models:
+        queryset = model.objects.all()
+        if min_price:
+            queryset = queryset.filter(price__gte=float(min_price))
+        if max_price:
+            queryset = queryset.filter(price__lte=float(max_price))
+        if category and category.strip() != '':
+            queryset = queryset.filter(model_name__iexact=category)
+        for row in queryset.values('id', 'name', 'description', 'model_name'):
+            score = score_product(query, row['name'], row['description'], row['model_name'])
+            if score > 0:
+                ranked.append((score, model, row['id']))
+
+    ranked.sort(key=lambda item: item[0], reverse=True)
+    chosen = ranked[:40]
+    grouped = {}
+    for _score, model, pk in chosen:
+        grouped.setdefault(model, []).append(pk)
+
+    loaded = {}
+    for model, ids in grouped.items():
+        for product in model.objects.filter(id__in=ids).prefetch_related('variants'):
+            loaded[(model, product.id)] = product
+
+    products = []
+    for _score, model, pk in chosen:
+        product = loaded.get((model, pk))
+        if product is not None:
+            products.append(_product_payload(product, request))
+    return products
+
+
 def search_all_products(request):
     query = request.GET.get('name', '')
     min_price = request.GET.get('min_price', None)
@@ -100,6 +135,8 @@ def search_all_products(request):
             filters &= Q(model_name__iexact=category)
 
         # 🛑 تم إزالة .values() واستبدالها بـ prefetch_related لدعم الـ GenericRelation للألوان
+        if query:
+            continue
         results = model.objects.filter(filters).prefetch_related('variants')
 
         for product in results:
@@ -116,7 +153,6 @@ def search_all_products(request):
                 'secondary_image2': request.build_absolute_uri(product.secondary_image2.url) if product.secondary_image2 else request.build_absolute_uri(static('products/placeholder.jpg')),
                 'description': product.description,
                 'stock': product.stock,
-                'delivery_days': product.delivery_days,
                 'is_active': product.is_active,
                 'is_available': product.is_available,
                 'user': product.user.id if product.user else None,
@@ -124,112 +160,105 @@ def search_all_products(request):
             }
             products.append(product_data)
 
+    if query:
+        products = _search_by_text(request, models, query, min_price, max_price, category)
+
     return JsonResponse({"products": products})
+
+
+def _product_payload(product, request, include_orders=False):
+    placeholder = request.build_absolute_uri(static('products/placeholder.jpg'))
+
+    def image_url(field_file):
+        if field_file:
+            return request.build_absolute_uri(field_file.url)
+        return placeholder
+
+    payload = {
+        'id': product.id,
+        'name': product.name,
+        'model_name': product.model_name,
+        'price': float(product.price),
+        'original_price': float(product.original_price),
+        'discount_percentage': float(product.discount_percentage),
+        'createAT': product.createAT,
+        'primary_image': image_url(product.primary_image),
+        'secondary_image1': image_url(product.secondary_image1),
+        'secondary_image2': image_url(product.secondary_image2),
+        'description': product.description,
+        'stock': product.stock,
+        'is_active': product.is_active,
+        'is_available': product.is_available,
+        'user': product.user.id if product.user else None,
+        'variants': get_product_variants_list(product, request),
+    }
+    if include_orders:
+        payload['orders_count'] = product.orders_count
+    return payload
+
+
+def _load_ranked_products(candidates, count):
+    chosen = heapq.nlargest(count, candidates, key=lambda item: item[0])
+    grouped = {}
+    for _sort_value, model, pk in chosen:
+        grouped.setdefault(model, []).append(pk)
+    loaded = {}
+    for model, ids in grouped.items():
+        for product in model.objects.filter(id__in=ids).prefetch_related('variants'):
+            loaded[(model, product.id)] = product
+    products = []
+    for _sort_value, model, pk in chosen:
+        product = loaded.get((model, pk))
+        if product is not None:
+            products.append(product)
+    return products
 
 
 def get_latest_products(request):
     count = int(request.GET.get('count', 100))
-    models = list(MODEL_MAPPING.values())
-    all_products = []
+    candidates = []
+    for model in MODEL_MAPPING.values():
+        rows = model.objects.order_by('-createAT').values_list('id', 'createAT')[:count]
+        candidates.extend((created, model, pk) for pk, created in rows)
 
-    for model in models:
-        # تحسين الأداء باستخدام prefetch_related
-        products = model.objects.all().prefetch_related('variants').order_by('-createAT')[:count]
-        for product in products:
-            product_data = {
-                'id': product.id,
-                'name': product.name,
-                'model_name': product.model_name,
-                'price': float(product.price),
-                'original_price': float(product.original_price),
-                'discount_percentage': float(product.discount_percentage),
-                'createAT': product.createAT,
-                'primary_image': request.build_absolute_uri(product.primary_image.url) if product.primary_image else request.build_absolute_uri(static('products/placeholder.jpg')),
-                'secondary_image1': request.build_absolute_uri(product.secondary_image1.url) if product.secondary_image1 else request.build_absolute_uri(static('products/placeholder.jpg')),
-                'secondary_image2': request.build_absolute_uri(product.secondary_image2.url) if product.secondary_image2 else request.build_absolute_uri(static('products/placeholder.jpg')),
-                'description': product.description,
-                'stock': product.stock,
-                'delivery_days': product.delivery_days,
-                'is_active': product.is_active,
-                'is_available': product.is_available,
-                'user': product.user.id if product.user else None,
-                'variants': get_product_variants_list(product, request)  # 🔥 أضفنا المتغيرات هنا للرئيسية
-            }
-            all_products.append(product_data)
-
-    latest_subset = heapq.nlargest(count, all_products, key=lambda x: x['createAT'])
+    products = _load_ranked_products(candidates, count)
+    latest_subset = [_product_payload(product, request) for product in products]
     random.shuffle(latest_subset)
-
     return JsonResponse({'products': latest_subset})
 
 
 def get_discounted_products(request):
     count = int(request.GET.get('count', 100))
-    models = list(MODEL_MAPPING.values())
-    discounted_products = []
+    candidates = []
+    for model in MODEL_MAPPING.values():
+        rows = (
+            model.objects.filter(discount_percentage__gt=0)
+            .order_by('-createAT')
+            .values_list('id', 'createAT')[:count]
+        )
+        candidates.extend((created, model, pk) for pk, created in rows)
 
-    for model in models:
-        products = model.objects.filter(discount_percentage__gt=0).prefetch_related('variants').order_by('-createAT')[:count]
-        for product in products:
-            product_data = {
-                'id': product.id,
-                'name': product.name,
-                'model_name': product.model_name,
-                'price': float(product.price),
-                'original_price': float(product.original_price),
-                'discount_percentage': float(product.discount_percentage),
-                'createAT': product.createAT,
-                'primary_image': request.build_absolute_uri(product.primary_image.url) if product.primary_image else request.build_absolute_uri(static('products/placeholder.jpg')),
-                'secondary_image1': request.build_absolute_uri(product.secondary_image1.url) if product.secondary_image1 else request.build_absolute_uri(static('products/placeholder.jpg')),
-                'secondary_image2': request.build_absolute_uri(product.secondary_image2.url) if product.secondary_image2 else request.build_absolute_uri(static('products/placeholder.jpg')),
-                'description': product.description,
-                'stock': product.stock,
-                'delivery_days': product.delivery_days,
-                'is_active': product.is_active,
-                'is_available': product.is_available,
-                'user': product.user.id if product.user else None,
-                'variants': get_product_variants_list(product, request)  # 🔥 أضفنا المتغيرات هنا لصفحة الخصومات
-            }
-            discounted_products.append(product_data)
-
-    discounted_subset = heapq.nlargest(count, discounted_products, key=lambda x: x['createAT'])
+    products = _load_ranked_products(candidates, count)
+    discounted_subset = [_product_payload(product, request) for product in products]
     random.shuffle(discounted_subset)
-
     return JsonResponse({'products': discounted_subset})
 
 
 def get_best_selling_products(request):
     count = int(request.GET.get('count', 20))
-    models = list(MODEL_MAPPING.values())
-    best_selling_products = []
+    candidates = []
+    for model in MODEL_MAPPING.values():
+        rows = (
+            model.objects.filter(is_available=True, is_active=True)
+            .order_by('-orders_count')
+            .values_list('id', 'orders_count')[:count]
+        )
+        candidates.extend((orders_count, model, pk) for pk, orders_count in rows)
 
-    for model in models:
-        products = model.objects.filter(is_available=True, is_active=True).prefetch_related('variants').order_by('-orders_count')[:count]
-        for product in products:
-            product_data = {
-                'id': product.id,
-                'name': product.name,
-                'model_name': product.model_name,
-                'price': float(product.price),
-                'original_price': float(product.original_price),
-                'discount_percentage': float(product.discount_percentage),
-                'createAT': product.createAT,
-                'orders_count': product.orders_count,
-                'primary_image': request.build_absolute_uri(product.primary_image.url) if product.primary_image else request.build_absolute_uri(static('products/placeholder.jpg')),
-                'secondary_image1': request.build_absolute_uri(product.secondary_image1.url) if product.secondary_image1 else request.build_absolute_uri(static('products/placeholder.jpg')),
-                'secondary_image2': request.build_absolute_uri(product.secondary_image2.url) if product.secondary_image2 else request.build_absolute_uri(static('products/placeholder.jpg')),
-                'description': product.description,
-                'stock': product.stock,
-                'delivery_days': product.delivery_days,
-                'is_active': product.is_active,
-                'is_available': product.is_available,
-                'user': product.user.id if product.user else None,
-                'variants': get_product_variants_list(product, request)  # 🔥 أضفنا المتغيرات هنا للأكثر مبيعاً
-            }
-            best_selling_products.append(product_data)
-
-    sorted_best_sellers = heapq.nlargest(count, best_selling_products, key=lambda x: x['orders_count'])
-
+    products = _load_ranked_products(candidates, count)
+    sorted_best_sellers = [
+        _product_payload(product, request, include_orders=True) for product in products
+    ]
     return JsonResponse({'products': sorted_best_sellers})
 
 
@@ -282,7 +311,6 @@ def get_similar_products(request):
             'secondary_image2': request.build_absolute_uri(product.secondary_image2.url) if product.secondary_image2 else request.build_absolute_uri(static('products/placeholder.jpg')),
             'description': product.description,
             'stock': product.stock,
-            'delivery_days': product.delivery_days,
             'is_active': product.is_active,
             'is_available': product.is_available,
             'user': product.user.id if product.user else None,
